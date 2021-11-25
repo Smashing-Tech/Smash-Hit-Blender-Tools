@@ -10,18 +10,18 @@ be a special hard time.
 # The path to a copy of MeshBake or compatible script (*.py, 0.3.0 or later)
 # TODO: Consider removing this again?
 DEV_MESHBAKE_ENV_PATH = "You need to set me!!"
-SH_MAX_STR_LEN = 256
+SH_MAX_STR_LEN = 512
 
 bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 2),
+	"version": (1, 2, 3),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
 	"wiki_url": "https://smashingmods.fandom.com/wiki/Knot126/Smash_Hit_Blender_Tools",
-	"tracker_url": "",
+	"tracker_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/issues",
 	"category": "Development",
 }
 
@@ -159,10 +159,16 @@ def sh_add_object(level_root, scene, obj, params):
 	if (obj.sh_properties.sh_type == "DEC"):
 		properties["tile"] = str(obj.sh_properties.sh_decal)
 	
-	# Add decal or water size if this is a decal or water
-	if (   obj.sh_properties.sh_type == "DEC"
-	    or obj.sh_properties.sh_type == "WAT"):
+	# Add decal size if this is a decal (based on sh_size)
+	if (obj.sh_properties.sh_type == "DEC"):
 		properties["size"] = str(obj.sh_properties.sh_size[0]) + " " + str(obj.sh_properties.sh_size[1])
+	
+	# Add water size if this is a water (based on physical plane properties)
+	if (obj.sh_properties.sh_type == "WAT"):
+		size = {"X": obj.dimensions[1] / 2,
+		        "Z": obj.dimensions[0] / 2}
+		
+		properties["size"] = str(size["X"]) + " " + str(size["Z"])
 	
 	# Set each of the tweleve paramaters if they're needed.
 	if (obj.sh_properties.sh_type == "OBS"):
@@ -1504,8 +1510,8 @@ class sh_ObstaclePanel(Panel):
 		if (sh_properties.sh_type == "POW"):
 			layout.prop(sh_properties, "sh_powerup")
 		
-		# Size for water and decals
-		if (sh_properties.sh_type == "WAT" or sh_properties.sh_type == "DEC"):
+		# Size for decals
+		if (sh_properties.sh_type == "DEC"):
 			layout.prop(sh_properties, "sh_size")
 		
 		# Hidden property
