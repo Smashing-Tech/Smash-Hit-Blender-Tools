@@ -16,7 +16,7 @@ bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 1),
+	"version": (1, 2, 2),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -127,13 +127,12 @@ def sh_add_object(level_root, scene, obj, params):
 		        "Z": obj.dimensions[0] / 2}
 		
 		# VR Multiply setting
-		if (params["sh_vrmultiply"] > 1.05 and ((scene.sh_len[2] / 2) - 0.5) < abs(size["Z"])):
+		if (params["sh_vrmultiply"] > 1.05 and (abs(size["Z"]) > 2.0)):
 			size["Z"] = size["Z"] * params["sh_vrmultiply"]
 		
 		properties["size"] = str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	
 	# Add rotation paramater if any rotation has been done and this is a box
-	# FIXME: Axies are diffrent in Smash Hit and I am awful at rotation, please check my work
 	if (   obj.sh_properties.sh_type == "OBS"
 	    or obj.sh_properties.sh_type == "DEC"):
 		if (   obj.rotation_euler[1] > 0.0 
@@ -210,7 +209,7 @@ def sh_add_object(level_root, scene, obj, params):
 	    and not obj.sh_properties.sh_template):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 		properties["tile"] = str(obj.sh_properties.sh_tile)
-		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
+		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1])
 		if (obj.sh_properties.sh_tilerot[1] > 0.0 or
 			obj.sh_properties.sh_tilerot[2] > 0.0 or
 			obj.sh_properties.sh_tilerot[0] > 0.0):
@@ -1089,7 +1088,7 @@ def sh_import_segment(fp, context, compressed = False):
 			
 			# Set water size
 			size = properties.get("size", "1 1").split(" ")
-			o.sh_properties.sh_size = float(size[0]), float(size[1]), 0.0
+			o.sh_properties.sh_size = float(size[0]), float(size[1])
 			
 			# Set hidden
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
@@ -1218,9 +1217,10 @@ class sh_EntityProperties(PropertyGroup):
 	sh_powerup: EnumProperty(
 		name = "Power-up",
 		description = "The type of power-up that will appear",
-		items = [ ('ballfrenzy', "Ball Frenzy", ""),
-				  ('slowmotion', "Slow Motion", ""),
-				  ('nitroballs', "Nitro Balls", ""),
+		items = [ ('ballfrenzy', "Ball Frenzy", "Allows the player infinite balls for some time"),
+				  ('slowmotion', "Slow Motion", "Slows down the game"),
+				  ('nitroballs', "Nitro Balls", "Turns balls into exposlives for a short period of time"),
+				  ('barrel', "Barrel", "Creates a large explosion which breaks glass (lefover from beta versions)"),
 				],
 		default = "ballfrenzy"
 		)
@@ -1271,7 +1271,7 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_tilerot: FloatVectorProperty(
 		name = "Tile rotation",
-		description = "Rotation of the tile, in radians (PI = 1/2 rotation)",
+		description = "Rotation of the tile, in radians (Pi = 1/2 rotation)",
 		default = (0.0, 0.0, 0.0), 
 		min = -6.28318530718,
 		max = 6.28318530718
@@ -1279,10 +1279,11 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_tilesize: FloatVectorProperty(
 		name = "Tile size",
-		description = "The appearing size of the tiles on the box when exported (third paramater is ignored)",
-		default = (1.0, 1.0, 0.0), 
+		description = "The appearing size of the tiles on the box when exported",
+		default = (1.0, 1.0), 
 		min = 0.0,
-		max = 128.0
+		max = 128.0,
+		size = 2
 	) 
 	
 	########################
@@ -1413,10 +1414,11 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_size: FloatVectorProperty(
 		name = "Size",
-		description = "The size of the object when exported (third paramater is ignored). For boxes this is the tileSize property. In the future, a plain should be used",
-		default = (1.0, 1.0, 0.0), 
+		description = "The size of the object when exported. For boxes this is the tileSize property. In the future, a plain should be used",
+		default = (1.0, 1.0), 
 		min = 0.0,
-		max = 128.0
+		max = 128.0,
+		size = 2
 	)
 
 class sh_SegmentPanel(Panel):
