@@ -16,7 +16,7 @@ bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 0),
+	"version": (1, 2, 1),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -302,13 +302,13 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	
 	# Write the file
 	
-	file_header = "<!-- Exported with blender tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
+	file_header = "<!-- Exported with Smash Hit Blender Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
 	c = file_header + et.tostring(level_root, encoding = "unicode")
 	
 	# Cook the mesh if we need to
 	meshfile = ospath.splitext(ospath.splitext(fp)[0])[0] + ".mesh.mp3"
 	if (compress):
-		meshfile = ospath.splitext(ospath.splitext(ospath.splitext(fp)[0])[0])[0] + ".mesh.mp3"
+		meshfile = ospath.splitext(meshfile)[0] + ".mesh.mp3"
 	
 	if (params["sh_exportmode"] == "MES"):
 		sh_cookMesh020(et.fromstring(c), meshfile)
@@ -325,6 +325,11 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		# Call mesh cook function
 		CustomScript.bt_cook_mesh(et.fromstring(c), meshfile)
 	
+	# Check file name
+	if not fp.endswith(params.get("require_ext", "")):
+		fp = fp + params.get("require_ext", "")
+	
+	# Write out file
 	if (not compress):
 		with open(fp, "w") as f:
 			f.write(c)
@@ -336,6 +341,55 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	return {"FINISHED"}
 
 ## UI-related classes
+
+class ExportHelper2:
+	filepath: StringProperty(
+		name="File Path",
+		description="Filepath used for exporting the file",
+		maxlen=1024,
+		subtype='FILE_PATH',
+	)
+	check_existing: BoolProperty(
+		name="Check Existing",
+		description="Check and warn on overwriting existing files",
+		default=True,
+		options={'HIDDEN'},
+	)
+	
+	# subclasses can override with decorator
+	# True == use ext, False == no ext, None == do nothing.
+	check_extension = True
+	
+	def invoke(self, context, _event):
+		import os
+		
+		if not self.filepath:
+			blend_filepath = context.blend_data.filepath
+			if not blend_filepath:
+				blend_filepath = "untitled"
+			else:
+				blend_filepath = os.path.splitext(blend_filepath)[0]
+			
+			self.filepath = blend_filepath + self.filename_ext
+		
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+	
+	def check(self, _context):
+		"""
+		Custom version of filepath check that fixes issues with two dots in names
+		"""
+		
+		import os
+		
+		change_ext = False
+		
+		if self.check_extension is not None:
+			if not self.filepath.endswith(self.filename_ext):
+				self.filepath += self.filename_ext
+				change_ext = True
+		
+		return change_ext
 
 # Common values between export types
 class sh_ExportCommon:
@@ -375,7 +429,7 @@ class sh_ExportCommon:
 
 # Normal segment export
 
-class sh_export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper, sh_ExportCommon):
+class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 	bl_idname = "sh.export"
 	bl_label = "Export Segment"
 	
@@ -383,14 +437,14 @@ class sh_export(bpy.types.Operator, bpy_extras.io_utils.ExportHelper, sh_ExportC
 	filter_glob = bpy.props.StringProperty(default='*.xml.mp3', options={'HIDDEN'}, maxlen=255)
 	
 	def execute(self, context):
-		return sh_export_segment(self.filepath, context, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template})
+		return sh_export_segment(self.filepath, context, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template, "require_ext": self.filename_ext})
 
 def sh_draw_export(self, context):
 	self.layout.operator("sh.export", text="Segment (.xml.mp3)")
 
 # Compressed segment export
 
-class sh_export_gz(bpy.types.Operator, bpy_extras.io_utils.ExportHelper, sh_ExportCommon):
+class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 	bl_idname = "sh.export_compressed"
 	bl_label = "Export Compressed Segment"
 	
@@ -398,7 +452,7 @@ class sh_export_gz(bpy.types.Operator, bpy_extras.io_utils.ExportHelper, sh_Expo
 	filter_glob = bpy.props.StringProperty(default='*.xml.gz.mp3', options={'HIDDEN'}, maxlen=255)
 	
 	def execute(self, context):
-		return sh_export_segment(self.filepath, context, compress = True, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template})
+		return sh_export_segment(self.filepath, context, compress = True, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template, "require_ext": self.filename_ext})
 
 def sh_draw_export_gz(self, context):
 	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
@@ -1045,7 +1099,7 @@ def sh_import_segment(fp, context, compressed = False):
 # UI-related
 
 # Uncompressed
-class sh_import(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+class sh_import(bpy.types.Operator, ExportHelper2):
 	bl_idname = "sh.import"
 	bl_label = "Import Segment"
 	
@@ -1059,7 +1113,7 @@ def sh_draw_import(self, context):
 	self.layout.operator("sh.import", text="Segment (.xml.mp3)")
 
 # Compressed
-class sh_import_gz(bpy.types.Operator, bpy_extras.io_utils.ExportHelper):
+class sh_import_gz(bpy.types.Operator, ExportHelper2):
 	bl_idname = "sh.import_gz"
 	bl_label = "Import Compressed Segment"
 	
