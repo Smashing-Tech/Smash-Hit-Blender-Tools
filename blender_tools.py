@@ -1,10 +1,5 @@
 """
-Smash Hit Segment Tool by Knot126
-
-See bl_info for more information.
-
-NOTE: I'd love to split this in to multipule files, but then distribution would
-be a special hard time.
+Smash Hit segment export tool for Blender
 """
 
 # The path to a copy of MeshBake or compatible script (*.py, 0.3.0 or later)
@@ -16,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 3),
+	"version": (1, 2, 4),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -30,6 +25,7 @@ import bpy
 import bpy_extras
 import gzip
 import json
+import os
 import os.path as ospath
 import importlib.util as imut
 
@@ -92,9 +88,7 @@ def sh_add_object(level_root, scene, obj, params):
 	"""
 	
 	# These positions are swapped
-	position = {"X": obj.location[1], 
-	            "Y": obj.location[2],
-	            "Z": obj.location[0]}
+	position = {"X": obj.location[1], "Y": obj.location[2], "Z": obj.location[0]}
 	
 	# VR Multiply setting
 	if (params["sh_vrmultiply"] > 1.05):
@@ -165,43 +159,46 @@ def sh_add_object(level_root, scene, obj, params):
 	
 	# Add water size if this is a water (based on physical plane properties)
 	if (obj.sh_properties.sh_type == "WAT"):
-		size = {"X": obj.dimensions[1] / 2,
-		        "Z": obj.dimensions[0] / 2}
+		size = {"X": obj.dimensions[1] / 2, "Z": obj.dimensions[0] / 2}
 		
 		properties["size"] = str(size["X"]) + " " + str(size["Z"])
 	
-	# Set each of the tweleve paramaters if they're needed.
+	# Set each of the tweleve paramaters if they are needed.
 	if (obj.sh_properties.sh_type == "OBS"):
-		if (obj.sh_properties.sh_param0):
-			properties["param0"] = obj.sh_properties.sh_param0
-		if (obj.sh_properties.sh_param1):
-			properties["param1"] = obj.sh_properties.sh_param1
-		if (obj.sh_properties.sh_param2):
-			properties["param2"] = obj.sh_properties.sh_param2
-		if (obj.sh_properties.sh_param3):
-			properties["param3"] = obj.sh_properties.sh_param3
-		if (obj.sh_properties.sh_param4):
-			properties["param4"] = obj.sh_properties.sh_param4
-		if (obj.sh_properties.sh_param5):
-			properties["param5"] = obj.sh_properties.sh_param5
-		if (obj.sh_properties.sh_param6):
-			properties["param6"] = obj.sh_properties.sh_param6
-		if (obj.sh_properties.sh_param7):
-			properties["param7"] = obj.sh_properties.sh_param7
-		if (obj.sh_properties.sh_param8):
-			properties["param8"] = obj.sh_properties.sh_param8
-		if (obj.sh_properties.sh_param9):
-			properties["param9"] = obj.sh_properties.sh_param9
-		if (obj.sh_properties.sh_param10):
-			properties["param10"] = obj.sh_properties.sh_param10
-		if (obj.sh_properties.sh_param11):
-			properties["param11"] = obj.sh_properties.sh_param11
+		for i in range(12):
+			val = getattr(obj.sh_properties, "sh_param" + str(i))
+			
+			if (val):
+				properties["param" + str(i)] = val
+		#if (obj.sh_properties.sh_param0):
+			#properties["param0"] = obj.sh_properties.sh_param0
+		#if (obj.sh_properties.sh_param1):
+			#properties["param1"] = obj.sh_properties.sh_param1
+		#if (obj.sh_properties.sh_param2):
+			#properties["param2"] = obj.sh_properties.sh_param2
+		#if (obj.sh_properties.sh_param3):
+			#properties["param3"] = obj.sh_properties.sh_param3
+		#if (obj.sh_properties.sh_param4):
+			#properties["param4"] = obj.sh_properties.sh_param4
+		#if (obj.sh_properties.sh_param5):
+			#properties["param5"] = obj.sh_properties.sh_param5
+		#if (obj.sh_properties.sh_param6):
+			#properties["param6"] = obj.sh_properties.sh_param6
+		#if (obj.sh_properties.sh_param7):
+			#properties["param7"] = obj.sh_properties.sh_param7
+		#if (obj.sh_properties.sh_param8):
+			#properties["param8"] = obj.sh_properties.sh_param8
+		#if (obj.sh_properties.sh_param9):
+			#properties["param9"] = obj.sh_properties.sh_param9
+		#if (obj.sh_properties.sh_param10):
+			#properties["param10"] = obj.sh_properties.sh_param10
+		#if (obj.sh_properties.sh_param11):
+			#properties["param11"] = obj.sh_properties.sh_param11
 	
 	# Set tint for decals
 	if (    obj.sh_properties.sh_havetint 
 	    and obj.sh_properties.sh_type == "DEC"):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
-
 	
 	if (obj.sh_properties.sh_type == "BOX"):
 		if (obj.sh_properties.sh_visible):
@@ -222,7 +219,7 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2]) + " " + str(obj.sh_properties.sh_tilerot[0])
 	
 	# Set the tag name
-	element_type = "MISSING"
+	element_type = "entity"
 	
 	if (obj.sh_properties.sh_type == "BOX"):
 		element_type = "box"
@@ -241,11 +238,11 @@ def sh_add_object(level_root, scene, obj, params):
 	if (params["isLast"]): # Fixes the issues with the last line of the file
 		el.tail = "\n"
 	
-	if (params["sh_exportmode"] == "STO" and obj.sh_properties.sh_type == "BOX"
-	    and obj.sh_properties.sh_visible):
+	if (params["sh_exportmode"] == "StoneHack" and obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible):
 		"""
 		Export a fake obstacle that will represent stone in the level.
 		"""
+		
 		el.tail = "\n\t\t"
 		
 		size = {"X": obj.dimensions[1] / 2,
@@ -271,22 +268,22 @@ def sh_add_object(level_root, scene, obj, params):
 			"param11": "sizeZ=" + str(size["Z"]),
 			"IMPORT_IGNORE": "STONEHACK_IGNORE",
 		}
-		if (obj.sh_properties.sh_visible):
-			properties["param3"] = "color=" + str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2])
-		elif (not obj.sh_properties.sh_template):
-			properties["param3"] = "color=" + str(scene.sh_color[0]) + " " + str(scene.sh_color[1]) + " " + str(scene.sh_color[2])
-		else:
+		
+		if (obj.sh_properties.sh_template):
 			properties["template"] = obj.sh_properties.sh_template
+		else:
+			properties["param8"] = "color=" + str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2])
 		
 		el_stone = et.SubElement(level_root, "obstacle", properties)
 		el_stone.tail = "\n\t"
 		if (params["isLast"]):
 			el_stone.tail = "\n"
 
-def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_exportmode": "NON"}):
+def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_exportmode": "Mesh"}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
 	"""
+	
 	context.window.cursor_set('WAIT')
 	
 	scene = context.scene.sh_properties
@@ -308,6 +305,8 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	# Write the file
 	
 	file_header = "<!-- Exported with Smash Hit Blender Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
+	if (params["sh_noheader"]):
+		file_header = ""
 	c = file_header + et.tostring(level_root, encoding = "unicode")
 	
 	# Cook the mesh if we need to
@@ -315,11 +314,9 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	if (compress):
 		meshfile = ospath.splitext(meshfile)[0] + ".mesh.mp3"
 	
-	if (params["sh_exportmode"] == "MES"):
-		sh_cookMesh020(et.fromstring(c), meshfile)
-	elif (params["sh_exportmode"] == "NEW2"):
+	if (params["sh_exportmode"] == "Mesh"):
 		sh_cookMesh042(et.fromstring(c), meshfile, params["sh_meshbake_template"])
-	elif (params["sh_exportmode"] == "CUS"):
+	elif (params["sh_exportmode"] == "Custom"):
 		print("Using the version of meshbake from:", DEV_MESHBAKE_ENV_PATH)
 		
 		# Load file as module
@@ -345,285 +342,6 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	context.window.cursor_set('DEFAULT')
 	return {"FINISHED"}
 
-## UI-related classes
-
-class ExportHelper2:
-	filepath: StringProperty(
-		name="File Path",
-		description="Filepath used for exporting the file",
-		maxlen=1024,
-		subtype='FILE_PATH',
-	)
-	check_existing: BoolProperty(
-		name="Check Existing",
-		description="Check and warn on overwriting existing files",
-		default=True,
-		options={'HIDDEN'},
-	)
-	
-	# subclasses can override with decorator
-	# True == use ext, False == no ext, None == do nothing.
-	check_extension = True
-	
-	def invoke(self, context, _event):
-		import os
-		
-		if not self.filepath:
-			blend_filepath = context.blend_data.filepath
-			if not blend_filepath:
-				blend_filepath = "untitled"
-			else:
-				blend_filepath = os.path.splitext(blend_filepath)[0]
-			
-			self.filepath = blend_filepath + self.filename_ext
-		
-		context.window_manager.fileselect_add(self)
-		return {'RUNNING_MODAL'}
-	
-	def check(self, _context):
-		"""
-		Custom version of filepath check that fixes issues with two dots in names
-		"""
-		
-		import os
-		
-		change_ext = False
-		
-		if self.check_extension is not None:
-			if not self.filepath.endswith(self.filename_ext):
-				self.filepath += self.filename_ext
-				change_ext = True
-		
-		return change_ext
-
-# Common values between export types
-class sh_ExportCommon:
-	sh_meshbake_template: StringProperty(
-		name = "Template for MeshBake",
-		description = "A relitive or full path to a template file for MeshBake.",
-		default = "",
-		maxlen = SH_MAX_STR_LEN,
-		)
-	
-	sh_exportmode: EnumProperty(
-		name = "Box Export Mode",
-		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
-		items = [ 
-			('MES', "Mesh Bake", "\"Mesh Bake\" exports a mesh file alongside your segment using a utility called MeshBake. This is probably what you want, unless you are working on an old segment or prefer to bake outside of blender. Note: this specific setting wil strech the textures, so make sure to use the transparent (0) one"),
-			('NEW2', "Mesh Bake (Better Tiles)", "Same as MeshBake but uses version 0.4.3. Tiles look better, but boxes that are not integer sizes (1.0, 2.0, 3.0 ... n.0) will look quite off and have major geometry errors"),
-			('STO', "Stonehack", "This will add a custom obstacle with special paramaters that tries its best to simulate stone. Only colour is supported; there are no textures"),
-			('CUS', "Custom Script", "This will use a custom script for baking the mesh file (Note: need to set \'DEV_MESHBAKE_ENV_PATH\' in script file)"),
-			('NON', "None", "This will skip exporting stone in any way. This is useful for when you would like to bake your stone offline or using another script"),
-		],
-		default = "NEW2"
-		)
-	
-	sh_vrmultiply: FloatProperty(
-		name = "VR Multiply",
-		description = "This option tries to strech the segment's depth so it can be played in Smash Hit VR easier and without actual modification to the level. This will try to avoid distorting the level by only changing the actual size of obstacles that are (SegSize - 0.5), but it may do this anyways. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work. Values less than 1.05 will use normal export",
-		default = 1.0,
-		min = 1.0,
-		max = 2.5
-		)
-	
-	nolighting: BoolProperty(
-		name = "Legacy lighting",
-		description = "Disables lighting in MeshBake 0.4.2 only (older versions did not support lighting)",
-		default = False
-		)
-
-# Normal segment export
-
-class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
-	bl_idname = "sh.export"
-	bl_label = "Export Segment"
-	
-	filename_ext = ".xml.mp3"
-	filter_glob = bpy.props.StringProperty(default='*.xml.mp3', options={'HIDDEN'}, maxlen=255)
-	
-	def execute(self, context):
-		return sh_export_segment(self.filepath, context, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template, "require_ext": self.filename_ext})
-
-def sh_draw_export(self, context):
-	self.layout.operator("sh.export", text="Segment (.xml.mp3)")
-
-# Compressed segment export
-
-class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
-	bl_idname = "sh.export_compressed"
-	bl_label = "Export Compressed Segment"
-	
-	filename_ext = ".xml.gz.mp3"
-	filter_glob = bpy.props.StringProperty(default='*.xml.gz.mp3', options={'HIDDEN'}, maxlen=255)
-	
-	def execute(self, context):
-		return sh_export_segment(self.filepath, context, compress = True, params = {"sh_vrmultiply": self.sh_vrmultiply, "sh_exportmode": self.sh_exportmode, "disable_lighting": self.nolighting, "sh_meshbake_template": self.sh_meshbake_template, "require_ext": self.filename_ext})
-
-def sh_draw_export_gz(self, context):
-	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
-
-## MESH BAKE
-## This is just taken from meshbake
-
-#MESHBAKE_START
-
-def sh_cookMesh020(seg, outfile):
-	"""
-	Builds a mesh file from an XML node
-	"""
-	
-	import struct
-	import math
-	import zlib
-	
-	NEW_CUBE_TEXTURE = (
-		(0.0,   0.0),   # LEFT  TOP    CORNER 
-		(0.0,   0.125), # LEFT  BOTTOM CORNER
-		(0.125, 0.125), # RIGHT BOTTOM CORNER
-		(0.125, 0.0),   # RIGHT TOP    CORNER
-	)
-
-	CUBE_COORDINATES = (
-		(1.000000, 1.000000, -1.000000),
-		(1.000000, -1.000000, -1.000000),
-		(1.000000, 1.000000, 1.000000),
-		(1.000000, -1.000000, 1.000000),
-		(-1.000000, 1.000000, -1.000000),
-		(-1.000000, -1.000000, -1.000000),
-		(-1.000000, 1.000000, 1.000000),
-		(-1.000000, -1.000000, 1.000000)
-	)
-
-	CUBE_INDEXES = (
-		# (coordinates, old texture/normal cubemap, new/smash hit cubemap)
-		(4, 0, 0),
-		(2, 1, 2),
-		(0, 2, 3),
-		(2, 1, 0),
-		(7, 3, 2),
-		(3, 4, 3),
-		(6, 5, 0),
-		(5, 6, 2),
-		(7, 7, 3),
-		(1, 8, 0),
-		(7, 9, 2),
-		(5, 10, 3),
-		(0, 2, 0),
-		(3, 4, 2),
-		(1, 8, 3),
-		(4, 11, 0),
-		(1, 8, 2),
-		(5, 6, 3),
-		(4, 0, 0),
-		(6, 12, 1),
-		(2, 1, 2),
-		(2, 1, 0),
-		(6, 13, 1),
-		(7, 3, 2),
-		(6, 5, 0),
-		(4, 11, 1),
-		(5, 6, 2),
-		(1, 8, 0),
-		(3, 4, 1),
-		(7, 9, 2),
-		(0, 2, 0),
-		(2, 1, 1),
-		(3, 4, 2),
-		(4, 11, 0),
-		(0, 2, 1),
-		(1, 8, 2),
-	)
-	
-	mesh_vert = b""
-	mesh_index = b""
-	mesh_index_count = 0
-	mesh_data = b""
-	mesh = open(outfile, "wb")
-	
-	# Iterate through all the entities, and make boxes into meshes
-	for entity in seg:
-		if (entity.tag == "box"):
-			properties = entity.attrib
-			
-			visible = properties.get("visible", "0")
-			
-			# Check if this box will be visible. If it is not visible, then
-			# it will not be included in the mesh.
-			if (visible == "1"):
-				pos = properties.get("pos", "0.0 0.0 0.0")
-				size = properties.get("size", "1.0 1.0 1.0")
-				color = properties.get("color", "1.0 1.0 1.0")
-				tile = properties.get("tile", "0")
-				
-				# Convert to numbers
-				# Position
-				pos = pos.split(" ")
-				pos[0] = float(pos[0])
-				pos[1] = float(pos[1])
-				pos[2] = float(pos[2])
-				
-				# Size
-				size = size.split(" ")
-				size[0] = float(size[0])
-				size[1] = float(size[1])
-				size[2] = float(size[2])
-				
-				# Colour
-				color = color.split(" ")
-				color[0] = max(0, min(int(float(color[0]) * 255), 255))
-				color[1] = max(0, min(int(float(color[1]) * 255), 255))
-				color[2] = max(0, min(int(float(color[2]) * 255), 255))
-				if (len(color) == 4):
-					color[3] = max(0, min(int(float(color[3]) * 255), 255))
-				else:
-					color.append(255)
-				
-				tile = int(tile)
-				
-				# Calculate position for the texture coordinates
-				tile_u_offset = ((tile % 8) + 1) / 8 - 0.125
-				tile_v_offset = ((math.floor(((tile + 1) / 8) - 0.125) + 1) / 8) - 0.125
-				
-				# Create the mesh and index data
-				for i in CUBE_INDEXES:
-					vert = b""
-					index = b""
-					
-					# The index for this vertex
-					index = struct.pack("I", mesh_index_count)
-					mesh_index_count += 1
-					
-					# The position of this vertex
-					vert += (struct.pack("f", (CUBE_COORDINATES[i[0]][0] * size[0]) + (pos[0])))
-					vert += (struct.pack("f", (CUBE_COORDINATES[i[0]][1] * size[1]) + (pos[1])))
-					vert += (struct.pack("f", (CUBE_COORDINATES[i[0]][2] * size[2]) + (pos[2])))
-					
-					# The texture coords for this vertex
-					vert += (struct.pack("f", NEW_CUBE_TEXTURE[i[2]][0] + tile_u_offset))
-					vert += (struct.pack("f", NEW_CUBE_TEXTURE[i[2]][1] + tile_v_offset))
-					
-					vert += (struct.pack("B", color[0]))
-					vert += (struct.pack("B", color[1]))
-					vert += (struct.pack("B", color[2]))
-					vert += (struct.pack("B", color[3]))
-					
-					assert(len(vert) == 24)
-					
-					mesh_vert += (vert)
-					mesh_index += (index)
-	
-	mesh_data += (struct.pack("I", len(mesh_vert) // 24))
-	mesh_data += (mesh_vert)
-	mesh_data += (struct.pack("I", len(mesh_vert) // 12))
-	mesh_data += (mesh_index)
-	
-	mesh_data = zlib.compress(mesh_data)
-	
-	print(f"Exported {mesh_index_count} verts.")
-	
-	mesh.write(mesh_data)
-	mesh.close()
-
 def sh_load_templates(infile):
 	"""
 	Load templates from a file
@@ -647,6 +365,155 @@ def sh_load_templates(infile):
 		result[name] = attribs
 	
 	return result
+
+## UI-related classes
+
+class ExportHelper2:
+	filepath: StringProperty(
+		name="File Path",
+		description="Filepath used for exporting the file",
+		maxlen=1024,
+		subtype='FILE_PATH',
+	)
+	check_existing: BoolProperty(
+		name="Check Existing",
+		description="Check and warn on overwriting existing files",
+		default=True,
+		options={'HIDDEN'},
+	)
+	
+	# subclasses can override with decorator
+	# True == use ext, False == no ext, None == do nothing.
+	check_extension = True
+	
+	def invoke(self, context, _event):
+		if not self.filepath:
+			blend_filepath = context.blend_data.filepath
+			if not blend_filepath:
+				blend_filepath = "untitled"
+			else:
+				blend_filepath = os.path.splitext(blend_filepath)[0]
+			
+			self.filepath = blend_filepath + self.filename_ext
+		
+		context.window_manager.fileselect_add(self)
+		return {'RUNNING_MODAL'}
+	
+	def check(self, _context):
+		"""
+		Custom version of filepath check that fixes issues with two dots in names
+		"""
+		
+		change_ext = False
+		
+		if self.check_extension is not None:
+			if not self.filepath.endswith(self.filename_ext):
+				self.filepath += self.filename_ext
+				change_ext = True
+		
+		return change_ext
+
+# Common values between export types
+class sh_ExportCommon:
+	sh_meshbake_template: StringProperty(
+		name = "Template",
+		description = "A relitive or full path to a template file. This is used for baking meshes",
+		default = "",
+		maxlen = SH_MAX_STR_LEN,
+		)
+	
+	sh_exportmode: EnumProperty(
+		name = "Box Export Mode",
+		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
+		items = [ 
+			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
+			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported; there are no textures"),
+			('Custom', "Custom script", "Uses a custom script for baking the mesh file (Note: need to set \'DEV_MESHBAKE_ENV_PATH\' in script file)"),
+			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
+		],
+		default = "Mesh"
+		)
+	
+	sh_vrmultiply: FloatProperty(
+		name = "Segment strech",
+		description = "This option tries to strech the segment's depth so it can be played in Smash Hit VR easier and without actual modification to the level. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work. Note that values less than 1.05 will use normal export",
+		default = 1.0,
+		min = 1.0,
+		max = 2.5
+		)
+	
+	nolighting: BoolProperty(
+		name = "Disable lighting",
+		description = "Disables vertex lighting in MeshBake",
+		default = False
+		)
+	
+	sh_disableheader: BoolProperty(
+		name = "Disable header comment",
+		description = "Disables the message that shows the segment was export with blender tools",
+		default = False
+		)
+
+class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
+	"""
+	Uncompressed segment export
+	"""
+	bl_idname = "sh.export"
+	bl_label = "Export Segment"
+	
+	filename_ext = ".xml.mp3"
+	filter_glob = bpy.props.StringProperty(default='*.xml.mp3', options={'HIDDEN'}, maxlen=255)
+	
+	def execute(self, context):
+		return sh_export_segment(
+			self.filepath,
+			context,
+			params = {
+				"sh_vrmultiply": self.sh_vrmultiply,
+				"sh_exportmode": self.sh_exportmode,
+				"disable_lighting": self.nolighting,
+				"sh_meshbake_template": self.sh_meshbake_template,
+				"require_ext": self.filename_ext,
+				"sh_noheader": self.sh_disableheader,
+			}
+		)
+
+def sh_draw_export(self, context):
+	self.layout.operator("sh.export", text="Segment (.xml.mp3)")
+
+class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
+	"""
+	Compressed segment export
+	"""
+	
+	bl_idname = "sh.export_compressed"
+	bl_label = "Export Compressed Segment"
+	
+	filename_ext = ".xml.gz.mp3"
+	filter_glob = bpy.props.StringProperty(default='*.xml.gz.mp3', options={'HIDDEN'}, maxlen=255)
+	
+	def execute(self, context):
+		return sh_export_segment(
+			self.filepath,
+			context,
+			compress = True, 
+			params = {
+				"sh_vrmultiply": self.sh_vrmultiply,
+				"sh_exportmode": self.sh_exportmode,
+				"disable_lighting": self.nolighting,
+				"sh_meshbake_template": self.sh_meshbake_template,
+				"require_ext": self.filename_ext,
+				"sh_noheader": self.sh_disableheader,
+			}
+		)
+
+def sh_draw_export_gz(self, context):
+	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
+
+## MESH BAKE
+## This is just taken from meshbake
+
+#MESHBAKE_START
 
 PLANE_COORDS = (
 	# (x, y, z, u, v),
@@ -1140,16 +1007,6 @@ class sh_SceneProperties(PropertyGroup):
 	Segment (scene) properties
 	"""
 	
-	# TODO: When is this still used???? kill it!
-	sh_color: FloatVectorProperty(
-		name = "Fallback colour",
-		description = "This is the default colour for any visible stone with an invalid colour. This can be overridden by templates and local stone colour",
-		subtype = "COLOR",
-		default = (0.5, 0.5, 0.5), 
-		min = 0.0,
-		max = 1.0
-	) 
-	
 	sh_len: FloatVectorProperty(
 		name = "Size",
 		description = "Segment size (Width, Height, Depth). Hint: Last paramater changes the length (depth) of the segment",
@@ -1316,84 +1173,84 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_param0: StringProperty(
 		name = "param0",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param1: StringProperty(
 		name = "param1",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param2: StringProperty(
 		name = "param2",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param3: StringProperty(
 		name = "param3",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param4: StringProperty(
 		name = "param4",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param5: StringProperty(
 		name = "param5",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param6: StringProperty(
 		name = "param6",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param7: StringProperty(
 		name = "param7",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param8: StringProperty(
 		name = "param8",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param9: StringProperty(
 		name = "param9",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param10: StringProperty(
 		name = "param10",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_param11: StringProperty(
 		name = "param11",
-		description = "key=value",
+		description = "Parameter which is given to the obstacle when spawned",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
@@ -1446,7 +1303,6 @@ class sh_SegmentPanel(Panel):
 		layout.prop(sh_properties, "sh_len")
 		layout.prop(sh_properties, "sh_template")
 		layout.prop(sh_properties, "sh_softshadow")
-		layout.prop(sh_properties, "sh_color")
 		layout.prop(sh_properties, "sh_light")
 		layout.prop(sh_properties, "sh_lightfactor")
 		layout.separator()
@@ -1537,7 +1393,7 @@ class sh_ObstaclePanel(Panel):
 		layout.prop(sh_properties, "sh_export")
 		
 		layout.separator()
-		
+
 classes = (
 	# Ignore the naming scheme for classes, please
 	sh_SceneProperties,
