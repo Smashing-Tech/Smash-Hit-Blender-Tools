@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 4),
+	"version": (1, 2, 5),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -29,8 +29,7 @@ import os
 import os.path as ospath
 import importlib.util as imut
 
-from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty,
-	FloatVectorProperty, EnumProperty, PointerProperty)
+from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
 
 ## Segment Export
@@ -41,9 +40,7 @@ def sh_create_root(scene, params):
 	Creates the main root and returns it
 	"""
 	
-	size = {"X": scene.sh_len[0],
-		    "Y": scene.sh_len[1],
-		    "Z": scene.sh_len[2]}
+	size = {"X": scene.sh_len[0], "Y": scene.sh_len[1], "Z": scene.sh_len[2]}
 	
 	# VR Multiply setting
 	if (params["sh_vrmultiply"] > 1.05):
@@ -116,9 +113,7 @@ def sh_add_object(level_root, scene, obj, params):
 	# Add size for boxes
 	if (obj.sh_properties.sh_type == "BOX"):
 		# Again, swapped becuase of Smash Hit's demensions
-		size = {"X": obj.dimensions[1] / 2,
-		        "Y": obj.dimensions[2] / 2,
-		        "Z": obj.dimensions[0] / 2}
+		size = {"X": obj.dimensions[1] / 2, "Y": obj.dimensions[2] / 2, "Z": obj.dimensions[0] / 2}
 		
 		# VR Multiply setting
 		if (params["sh_vrmultiply"] > 1.05 and (abs(size["Z"]) > 2.0)):
@@ -127,11 +122,8 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["size"] = str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	
 	# Add rotation paramater if any rotation has been done and this is a box
-	if (   obj.sh_properties.sh_type == "OBS"
-	    or obj.sh_properties.sh_type == "DEC"):
-		if (   obj.rotation_euler[1] > 0.0 
-			or obj.rotation_euler[2] > 0.0 
-			or obj.rotation_euler[0] > 0.0):
+	if (obj.sh_properties.sh_type == "OBS" or obj.sh_properties.sh_type == "DEC"):
+		if (obj.rotation_euler[1] > 0.0 or obj.rotation_euler[2] > 0.0 or obj.rotation_euler[0] > 0.0):
 			properties["rot"] = str(obj.rotation_euler[1]) + " " + str(obj.rotation_euler[2]) + " " + str(obj.rotation_euler[0])
 	
 	# Add template for all types of objects
@@ -139,14 +131,11 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["template"] = obj.sh_properties.sh_template
 	
 	# Add mode appearance tag
-	if (    obj.sh_properties.sh_type == "OBS"
-	    and obj.sh_properties.sh_mode
-	    and obj.sh_properties.sh_mode != "0"):
+	if (obj.sh_properties.sh_type == "OBS" and obj.sh_properties.sh_mode and obj.sh_properties.sh_mode != "0"):
 		properties["mode"] = obj.sh_properties.sh_mode
 	
 	# Add reflection property for boxes if not default
-	if (    obj.sh_properties.sh_type == "BOX"
-	    and obj.sh_properties.sh_reflective):
+	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_reflective):
 		properties["reflection"] = "1"
 	
 	# Add decal number if this is a decal
@@ -170,34 +159,9 @@ def sh_add_object(level_root, scene, obj, params):
 			
 			if (val):
 				properties["param" + str(i)] = val
-		#if (obj.sh_properties.sh_param0):
-			#properties["param0"] = obj.sh_properties.sh_param0
-		#if (obj.sh_properties.sh_param1):
-			#properties["param1"] = obj.sh_properties.sh_param1
-		#if (obj.sh_properties.sh_param2):
-			#properties["param2"] = obj.sh_properties.sh_param2
-		#if (obj.sh_properties.sh_param3):
-			#properties["param3"] = obj.sh_properties.sh_param3
-		#if (obj.sh_properties.sh_param4):
-			#properties["param4"] = obj.sh_properties.sh_param4
-		#if (obj.sh_properties.sh_param5):
-			#properties["param5"] = obj.sh_properties.sh_param5
-		#if (obj.sh_properties.sh_param6):
-			#properties["param6"] = obj.sh_properties.sh_param6
-		#if (obj.sh_properties.sh_param7):
-			#properties["param7"] = obj.sh_properties.sh_param7
-		#if (obj.sh_properties.sh_param8):
-			#properties["param8"] = obj.sh_properties.sh_param8
-		#if (obj.sh_properties.sh_param9):
-			#properties["param9"] = obj.sh_properties.sh_param9
-		#if (obj.sh_properties.sh_param10):
-			#properties["param10"] = obj.sh_properties.sh_param10
-		#if (obj.sh_properties.sh_param11):
-			#properties["param11"] = obj.sh_properties.sh_param11
 	
 	# Set tint for decals
-	if (    obj.sh_properties.sh_havetint 
-	    and obj.sh_properties.sh_type == "DEC"):
+	if (obj.sh_properties.sh_havetint and obj.sh_properties.sh_type == "DEC"):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 	
 	if (obj.sh_properties.sh_type == "BOX"):
@@ -207,15 +171,11 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["visible"] = "0"
 	
 	# Set tile info for boxes if visible and there is no template specified
-	if (    obj.sh_properties.sh_type == "BOX"
-	    and obj.sh_properties.sh_visible
-	    and not obj.sh_properties.sh_template):
+	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 		properties["tile"] = str(obj.sh_properties.sh_tile)
 		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1])
-		if (obj.sh_properties.sh_tilerot[1] > 0.0 or
-			obj.sh_properties.sh_tilerot[2] > 0.0 or
-			obj.sh_properties.sh_tilerot[0] > 0.0):
+		if (obj.sh_properties.sh_tilerot[1] > 0.0 or obj.sh_properties.sh_tilerot[2] > 0.0 or obj.sh_properties.sh_tilerot[0] > 0.0):
 			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2]) + " " + str(obj.sh_properties.sh_tilerot[0])
 	
 	# Set the tag name
@@ -245,13 +205,8 @@ def sh_add_object(level_root, scene, obj, params):
 		
 		el.tail = "\n\t\t"
 		
-		size = {"X": obj.dimensions[1] / 2,
-		        "Y": obj.dimensions[2] / 2,
-		        "Z": obj.dimensions[0] / 2}
-		
-		position = {"X": obj.location[1], 
-		            "Y": obj.location[2],
-		            "Z": obj.location[0]}
+		size = {"X": obj.dimensions[1] / 2, "Y": obj.dimensions[2] / 2, "Z": obj.dimensions[0] / 2}
+		position = {"X": obj.location[1], "Y": obj.location[2], "Z": obj.location[0]}
 		
 		# VR Multiply setting
 		if (params["sh_vrmultiply"] > 1.05):
@@ -310,9 +265,10 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	c = file_header + et.tostring(level_root, encoding = "unicode")
 	
 	# Cook the mesh if we need to
-	meshfile = ospath.splitext(ospath.splitext(fp)[0])[0] + ".mesh.mp3"
+	meshfile = ospath.splitext(ospath.splitext(fp)[0])[0]
 	if (compress):
-		meshfile = ospath.splitext(meshfile)[0] + ".mesh.mp3"
+		meshfile = ospath.splitext(meshfile)[0]
+	meshfile += ".mesh.mp3"
 	
 	if (params["sh_exportmode"] == "Mesh"):
 		sh_cookMesh042(et.fromstring(c), meshfile, params["sh_meshbake_template"])
@@ -326,10 +282,6 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		
 		# Call mesh cook function
 		CustomScript.bt_cook_mesh(et.fromstring(c), meshfile)
-	
-	# Check file name
-	if not fp.endswith(params.get("require_ext", "")):
-		fp = fp + params.get("require_ext", "")
 	
 	# Write out file
 	if (not compress):
@@ -473,7 +425,6 @@ class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 				"sh_exportmode": self.sh_exportmode,
 				"disable_lighting": self.nolighting,
 				"sh_meshbake_template": self.sh_meshbake_template,
-				"require_ext": self.filename_ext,
 				"sh_noheader": self.sh_disableheader,
 			}
 		)
@@ -502,7 +453,6 @@ class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 				"sh_exportmode": self.sh_exportmode,
 				"disable_lighting": self.nolighting,
 				"sh_meshbake_template": self.sh_meshbake_template,
-				"require_ext": self.filename_ext,
 				"sh_noheader": self.sh_disableheader,
 			}
 		)
