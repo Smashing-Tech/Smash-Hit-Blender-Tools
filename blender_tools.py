@@ -2,16 +2,13 @@
 Smash Hit segment export tool for Blender
 """
 
-# The path to a copy of MeshBake or compatible script (*.py, 0.3.0 or later)
-# TODO: Consider removing this again?
-DEV_MESHBAKE_ENV_PATH = "You need to set me!!"
 SH_MAX_STR_LEN = 512
 
 bl_info = {
 	"name": "Smash Hit Segment Tools",
 	"description": "Segment exporter and item property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 5),
+	"version": (1, 2, 6),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -28,6 +25,7 @@ import json
 import os
 import os.path as ospath
 import importlib.util as imut
+import bake_mesh
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
@@ -262,7 +260,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	file_header = "<!-- Exported with Smash Hit Blender Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
 	if (params["sh_noheader"]):
 		file_header = ""
-	c = file_header + et.tostring(level_root, encoding = "unicode")
+	content = file_header + et.tostring(level_root, encoding = "unicode")
 	
 	# Cook the mesh if we need to
 	meshfile = ospath.splitext(ospath.splitext(fp)[0])[0]
@@ -271,25 +269,25 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	meshfile += ".mesh.mp3"
 	
 	if (params["sh_exportmode"] == "Mesh"):
-		sh_cookMesh042(et.fromstring(c), meshfile, params["sh_meshbake_template"])
-	elif (params["sh_exportmode"] == "Custom"):
-		print("Using the version of meshbake from:", DEV_MESHBAKE_ENV_PATH)
+		bake_mesh.bakeMesh(content, meshfile)
+	#elif (params["sh_exportmode"] == "Custom"):
+		#print("Using the version of meshbake from:", DEV_MESHBAKE_ENV_PATH)
 		
-		# Load file as module
-		spec = imut.spec_from_file_location("segtool.meshbake", DEV_MESHBAKE_ENV_PATH)
-		CustomScript = imut.module_from_spec(spec)
-		spec.loader.exec_module(CustomScript)
+		## Load file as module
+		#spec = imut.spec_from_file_location("segtool.meshbake", DEV_MESHBAKE_ENV_PATH)
+		#CustomScript = imut.module_from_spec(spec)
+		#spec.loader.exec_module(CustomScript)
 		
-		# Call mesh cook function
-		CustomScript.bt_cook_mesh(et.fromstring(c), meshfile)
+		## Call mesh cook function
+		#CustomScript.bt_cook_mesh(et.fromstring(content), meshfile)
 	
 	# Write out file
 	if (not compress):
 		with open(fp, "w") as f:
-			f.write(c)
+			f.write(content)
 	else:
 		with gzip.open(fp, "wb") as f:
-			f.write(c.encode())
+			f.write(content.encode())
 	
 	context.window.cursor_set('DEFAULT')
 	return {"FINISHED"}
@@ -298,6 +296,7 @@ def sh_load_templates(infile):
 	"""
 	Load templates from a file
 	"""
+	
 	result = {}
 	
 	if (not infile):
@@ -375,12 +374,13 @@ class sh_ExportCommon:
 		)
 	
 	sh_exportmode: EnumProperty(
-		name = "Box Export Mode",
+		name = "Box baking",
 		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
 		items = [ 
 			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
+			#('NewMesh', "Mesh (beta)", "Exports a .mesh file alongside the segment for showing visible box geometry"),
 			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported; there are no textures"),
-			('Custom', "Custom script", "Uses a custom script for baking the mesh file (Note: need to set \'DEV_MESHBAKE_ENV_PATH\' in script file)"),
+			#('Custom', "Custom script", "Uses a custom script for baking the mesh file (Note: need to set \'DEV_MESHBAKE_ENV_PATH\' in script file)"),
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
@@ -459,323 +459,6 @@ class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 
 def sh_draw_export_gz(self, context):
 	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
-
-## MESH BAKE
-## This is just taken from meshbake
-
-#MESHBAKE_START
-
-PLANE_COORDS = (
-	# (x, y, z, u, v),
-	(-1.0, 1.0, 0.0, 0.0, 0.0), # top left
-	(-1.0, -1.0, 0.0, 0.0, 0.125), # bottom left
-	(1.0, -1.0, 0.0, 0.125, 0.125), # bottom right
-	(1.0, 1.0, 0.0, 0.125, 0.0), # top right
-)
-
-PLANE_INDEX_BUFFER = (
-	0, 1, 2, # first triangle
-	0, 2, 3, # second triangle
-)
-
-def sh_cookMesh042(seg, outfile, templates_file = None):
-	"""
-	Builds a mesh file from an XML node
-	
-	Try to keep functions used only in this function within the scope of this
-	function so its easier to embed.
-	"""
-	
-	import struct
-	import math
-	import zlib
-	
-	# NOTE: Using bytearrays improves preformance.
-	mesh_vert = bytearray()
-	mesh_vert_count = 0
-	mesh_index = bytearray()
-	mesh = open(outfile, "wb")
-	light_factor = 0.666
-	
-	def add_vert(x, y, z, u, v, r, g, b, a):
-		"""
-		Adds a vertex
-		"""
-		# print(f"{x}, {y}, {z}, {u}, {v}")
-		
-		nonlocal mesh_vert_count
-		nonlocal mesh_vert
-		nonlocal mesh_index
-		mesh_vert_count += 1
-		
-		vert = b""
-		index = b""
-		
-		# The position of this vertex
-		vert += struct.pack("f", x)
-		vert += struct.pack("f", y)
-		vert += struct.pack("f", z)
-		
-		vert += struct.pack("f", u)
-		vert += struct.pack("f", v)
-		
-		vert += struct.pack("B", max(0, min(r, 255)))
-		vert += struct.pack("B", max(0, min(g, 255)))
-		vert += struct.pack("B", max(0, min(b, 255)))
-		vert += struct.pack("B", max(0, min(a, 255)))
-		
-		assert(len(vert) == 24)
-		
-		mesh_vert += vert
-		
-		return mesh_vert_count
-	
-	def add_cube(x, y, z, sx, sy, sz, t, tx, ty, c, lgt):
-		"""
-		Adds a cube
-		"""
-		nonlocal mesh_index
-		nonlocal light_factor # the multiply of the light to make sure it's not too bright
-		
-		# Calculate position for the texture coordinates
-		tile_u_offset = ((t % 8) + 1) / 8 - 0.125
-		tile_v_offset = ((math.floor(((t + 1) / 8) - 0.125) + 1) / 8) - 0.125
-		
-		# Front and back faces
-		for z_sign in [1.0, -1.0]:
-			y_left = (sy * 2.0)
-			y_offset = (sy * 1.0)
-			
-			while (y_left > 0.0):
-				x_left = (sx * 2.0)
-				x_offset = (sx * 1.0)
-				
-				y_cut = 1.0
-				if (y_left < 1.0):
-					y_cut = y_left
-				
-				while (x_left > 0.0):
-					x_cut = 1.0
-					if (x_left < 1.0):
-						x_cut = x_left
-					
-					# Add indexes for one plane
-					for i in range(len(PLANE_INDEX_BUFFER)):
-						mesh_index += struct.pack("I", PLANE_INDEX_BUFFER[i] + mesh_vert_count)
-					
-					# Add verts for one plane
-					for i in range(len(PLANE_COORDS)):
-						add_vert(
-							((PLANE_COORDS[i][0] * x_cut) * (tx * 0.5) + x + x_offset + ((1.0 - x_cut) * 0.5)) - 0.5,
-							((PLANE_COORDS[i][1] * y_cut) * (ty * 0.5) + y + y_offset + ((1.0 - y_cut) * 0.5)) - 0.5,
-							z + (sz * z_sign),
-							(PLANE_COORDS[i][3] * x_cut) + tile_u_offset,
-							(PLANE_COORDS[i][4] * y_cut) + tile_v_offset,
-							int(c[0] * light_factor * (lgt[int((z_sign-1.0)/-2)])), 
-							int(c[1] * light_factor * (lgt[int((z_sign-1.0)/-2)])), 
-							int(c[2] * light_factor * (lgt[int((z_sign-1.0)/-2)])), 
-							c[3])
-					
-					x_left -= tx
-					x_offset -= tx
-				# END while (x_left > 0.0)
-				
-				y_left -= ty
-				y_offset -= ty
-			# END while (y_left > 0.0)
-		
-		# Top and bottom faces
-		# NOTE: This is only partially working...
-		for j in [(0, 1), (1, 0)]:
-			for y_sign in [1.0, -1.0]:
-				z_left = (sz * 2.0)
-				z_offset = (sz * 1.0)
-				
-				while (z_left > 0.0):
-					x_left = (sx * 2.0)
-					x_offset = (sx * 1.0)
-					
-					z_cut = 1.0
-					if (z_left < 1.0):
-						z_cut = z_left
-					
-					while (x_left > 0.0):
-						x_cut = 1.0
-						if (x_left < 1.0):
-							x_cut = x_left
-						
-						# Add indexes for one plane
-						for i in range(len(PLANE_INDEX_BUFFER)):
-							mesh_index += struct.pack("I", PLANE_INDEX_BUFFER[i] + mesh_vert_count)
-						
-						# Add verts for one plane
-						for i in range(len(PLANE_COORDS)):
-							add_vert(
-								(PLANE_COORDS[i][j[0]] * (tx * 0.5) + x + x_offset + ((1.0 - x_cut) * 0.5)) - 0.5,
-								y + (sy * y_sign),
-								(PLANE_COORDS[i][j[1]] * (ty * 0.5) + z + z_offset + ((1.0 - z_cut) * 0.5)) - 0.5,
-								PLANE_COORDS[i][3] + tile_u_offset,
-								PLANE_COORDS[i][4] + tile_v_offset,
-								int(c[0] * light_factor * (lgt[2 + j[1]])), 
-								int(c[1] * light_factor * (lgt[2 + j[1]])), 
-								int(c[2] * light_factor * (lgt[2 + j[1]])), 
-								c[3])
-						
-						x_left -= tx
-						x_offset -= tx
-					# END while (x_left > 0.0)
-					
-					z_left -= ty
-					z_offset -= ty
-				# END while (y_left > 0.0)
-			# END for y_sign
-		
-		# Left and right side faces
-		for j in [(0, 1), (1, 0)]:
-			for x_sign in [1.0, -1.0]:
-				y_left = (sy * 2.0)
-				y_offset = (sy * 1.0)
-				
-				while (y_left > 0.0):
-					y_cut = 1.0
-					if (y_left < 1.0):
-						y_cut = y_left
-					
-					z_left = (sz * 2.0)
-					z_offset = (sz * 1.0)
-					
-					while (z_left > 0.0):
-						z_cut = 1.0
-						if (z_left < 1.0):
-							z_cut = z_left
-						
-						# Add indexes for one plane
-						for i in range(len(PLANE_INDEX_BUFFER)):
-							mesh_index += struct.pack("I", PLANE_INDEX_BUFFER[i] + mesh_vert_count)
-						
-						# Add verts for one plane
-						for i in range(len(PLANE_COORDS)):
-							add_vert(
-								x + (sx * x_sign),
-								(PLANE_COORDS[i][j[0]] * (ty * 0.5) + y + y_offset + ((1.0 - y_cut) * 0.5)) - 0.5,
-								(PLANE_COORDS[i][j[1]] * (tx * 0.5) + z + z_offset + ((1.0 - z_cut) * 0.5)) - 0.5,
-								PLANE_COORDS[i][3] + tile_u_offset,
-								PLANE_COORDS[i][4] + tile_v_offset,
-								int(c[0] * light_factor * (lgt[4 + j[1]])), 
-								int(c[1] * light_factor * (lgt[4 + j[1]])), 
-								int(c[2] * light_factor * (lgt[4 + j[1]])), 
-								c[3])
-						
-						z_left -= tx
-						z_offset -= tx
-					# END while (z_left > 0.0)
-					
-					y_left -= ty
-					y_offset -= ty
-				# END while (y_left > 0.0)
-			# END for x_sign
-	
-	light_multiply = (
-		float(seg.attrib.get("lightLeft", "1")), 
-		float(seg.attrib.get("lightRight", "1")), 
-		float(seg.attrib.get("lightTop", "1")), 
-		float(seg.attrib.get("lightBottom", "1")), 
-		float(seg.attrib.get("lightFront", "1")), 
-		float(seg.attrib.get("lightBack", "1"))
-	)
-	
-	if (seg.attrib.get("meshbake_disableLight", "0") == "1"):
-		light_multiply = (2.0, 2.0, 2.0, 2.0, 2.0, 2.0)
-	
-	if ("meshbake_lightFactor" in seg.attrib):
-		light_factor = float(seg.attrib["meshbake_lightFactor"])
-	
-	templates = sh_load_templates(templates_file)
-	
-	# Iterate through all the entities, and make boxes into meshes
-	for entity in seg:
-		if (entity.tag == "box"):
-			properties = entity.attrib
-			
-			visible = properties.get("visible", "0")
-			
-			# NOTE: This behaiour seems more like what Smash Hit Editor does.
-			# Previously, this would only export if visible == "1", but now it
-			# does not require that stone be visible. New versions of Blender
-			# Tools will now set visible property explicitly.
-			if (visible == "0"):
-				continue
-			
-			# Get the template for this box
-			template = properties.get("template", "")
-			
-			# Set the overrides from the template
-			overrides = templates.get(template, {})
-			
-			# Gets the properties
-			# Basic process for each (look up "template system"):
-			# 
-			#   1. Get template property for if the local property does not 
-			#      exist. Also specify a fallback if no such thing is in the 
-			#      template.
-			# 
-			#   2. Get the property if it exsist, otherwise use template, or
-			#      if without template, then the fallback paramaters
-			# 
-			# NOTE: Sorry I just explained how a template system works. It just
-			#       something that confused me initially.
-			pos = overrides.get("pos", properties.get("pos", "0.0 0.0 0.0"))
-			size = overrides.get("size", properties.get("size", "1.0 1.0 1.0"))
-			color = overrides.get("color", properties.get("color", "1.0 1.0 1.0"))
-			tile = overrides.get("tile", properties.get("tile", "0"))
-			tileSize = overrides.get("tileSize", properties.get("tileSize", "1.0 1.0"))
-			
-			# Convert to numbers
-			# Position
-			pos = pos.split(" ")
-			pos[0] = float(pos[0])
-			pos[1] = float(pos[1])
-			pos[2] = float(pos[2])
-			
-			# Size
-			size = size.split(" ")
-			size[0] = float(size[0])
-			size[1] = float(size[1])
-			size[2] = float(size[2])
-			
-			# Colour
-			color = color.split(" ")
-			color[0] = int(float(color[0]) * 255)
-			color[1] = int(float(color[1]) * 255)
-			color[2] = int(float(color[2]) * 255)
-			if (len(color) == 4):
-				color[3] = int(float(color[3]) * 255)
-			else:
-				color.append(255)
-			
-			# Tile
-			tile = int(tile)
-			
-			# Tile Size
-			tileSize = tileSize.split(" ")
-			tileSize[0] = float(tileSize[0])
-			tileSize[1] = float(tileSize[1])
-			
-			add_cube(pos[0], pos[1], pos[2], size[0], size[1], size[2], tile, tileSize[0], tileSize[1], color, light_multiply)
-	
-	mesh_data = (struct.pack("I", len(mesh_vert) // 24))
-	mesh_data += (mesh_vert)
-	mesh_data += (struct.pack("I", len(mesh_index) // 12))
-	mesh_data += (mesh_index)
-	
-	mesh_data = zlib.compress(mesh_data)
-	
-	print(f"Exported {mesh_vert_count} verts.")
-	
-	mesh.write(mesh_data)
-	mesh.close()
-
-#MESHBAKE_END
 
 ## IMPORT
 ## The following things are related to the importer, which is not complete.
