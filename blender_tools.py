@@ -5,10 +5,10 @@ Smash Hit segment export tool for Blender
 SH_MAX_STR_LEN = 512
 
 bl_info = {
-	"name": "Smash Hit Segment Tools",
-	"description": "Segment exporter and item property editor for Smash Hit",
+	"name": "Smash Hit Tools",
+	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 2, 6),
+	"version": (1, 99, 7),
 	"blender": (2, 83, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -27,7 +27,7 @@ import os.path as ospath
 import importlib.util as imut
 import bake_mesh
 
-from bpy.props import (StringProperty, BoolProperty, IntProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
+from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
 
 ## Segment Export
@@ -166,7 +166,8 @@ def sh_add_object(level_root, scene, obj, params):
 		if (obj.sh_properties.sh_visible):
 			properties["visible"] = "1"
 		else:
-			properties["visible"] = "0"
+			if (not obj.sh_properties.sh_template):
+				properties["visible"] = "0"
 	
 	# Set tile info for boxes if visible and there is no template specified
 	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
@@ -268,18 +269,16 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		meshfile = ospath.splitext(meshfile)[0]
 	meshfile += ".mesh.mp3"
 	
-	if (params["sh_exportmode"] == "Mesh"):
-		bake_mesh.bakeMesh(content, meshfile)
-	#elif (params["sh_exportmode"] == "Custom"):
-		#print("Using the version of meshbake from:", DEV_MESHBAKE_ENV_PATH)
-		
-		## Load file as module
-		#spec = imut.spec_from_file_location("segtool.meshbake", DEV_MESHBAKE_ENV_PATH)
-		#CustomScript = imut.module_from_spec(spec)
-		#spec.loader.exec_module(CustomScript)
-		
-		## Call mesh cook function
-		#CustomScript.bt_cook_mesh(et.fromstring(content), meshfile)
+	try:
+		if (params["sh_exportmode"] == "Mesh"):
+			bake_mesh.TILE_COLS = params["bake_tile_texture_count"][0]
+			bake_mesh.TILE_ROWS = params["bake_tile_texture_count"][1]
+			bake_mesh.BAKE_BACK_FACES = params.get("bake_back_faces", False)
+			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
+			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
+			bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
+	except FileNotFoundError:
+		print("Warning: Templates file may not have been found.")
 	
 	# Write out file
 	if (not compress):
@@ -366,11 +365,12 @@ class ExportHelper2:
 
 # Common values between export types
 class sh_ExportCommon:
-	sh_meshbake_template: StringProperty(
-		name = "Template",
-		description = "A relitive or full path to a template file. This is used for baking meshes",
-		default = "",
-		maxlen = SH_MAX_STR_LEN,
+	sh_vrmultiply: FloatProperty(
+		name = "Segment strech",
+		description = "This option tries to strech the segment's depth. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work.",
+		default = 1.0,
+		min = 1.0,
+		max = 4.0,
 		)
 	
 	sh_exportmode: EnumProperty(
@@ -378,31 +378,49 @@ class sh_ExportCommon:
 		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
 		items = [ 
 			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
-			#('NewMesh', "Mesh (beta)", "Exports a .mesh file alongside the segment for showing visible box geometry"),
 			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported; there are no textures"),
-			#('Custom', "Custom script", "Uses a custom script for baking the mesh file (Note: need to set \'DEV_MESHBAKE_ENV_PATH\' in script file)"),
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
 		)
 	
-	sh_vrmultiply: FloatProperty(
-		name = "Segment strech",
-		description = "This option tries to strech the segment's depth so it can be played in Smash Hit VR easier and without actual modification to the level. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work. Note that values less than 1.05 will use normal export",
-		default = 1.0,
-		min = 1.0,
-		max = 2.5
-		)
-	
-	nolighting: BoolProperty(
-		name = "Disable lighting",
-		description = "Disables vertex lighting in MeshBake",
-		default = False
+	sh_meshbake_template: StringProperty(
+		name = "Template",
+		description = "A relitive or full path to a template file. This is used for baking meshes",
+		default = "",
+		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_disableheader: BoolProperty(
 		name = "Disable header comment",
 		description = "Disables the message that shows the segment was export with blender tools",
+		default = False
+		)
+	
+	bake_tile_texture_count: IntVectorProperty(
+		name = "Tile texture count",
+		description = "For mesh bake only: The number of tiles in tiles.png.mtx in (columns, rows) format",
+		size = 2,
+		default = (8, 8),
+		min = 1,
+		max = 32,
+		)
+	
+	no_lighting: BoolProperty(
+		name = "Disable lighting",
+		description = "For bake mesh only: Disables vertex per-face vertex lighting",
+		default = False
+		)
+	
+	bake_unseen_faces: BoolProperty(
+		name = "Bake unseen faces",
+		description = "For bake mesh only: Bakes faces that cannot be seen by the player. This is only needed for main menu segments where these faces can actually be seen",
+		default = False
+		)
+	
+	bake_ignore_tilesize: BoolProperty(
+		name = "Ignore tileSize parameter",
+		description = "For bake mesh only: Ignores the non-faithful interpretation of the tileSize argument in MeshBake and only allows for tileSize to have one or three numbers",
 		default = False
 		)
 
@@ -423,9 +441,13 @@ class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 			params = {
 				"sh_vrmultiply": self.sh_vrmultiply,
 				"sh_exportmode": self.sh_exportmode,
-				"disable_lighting": self.nolighting,
+				"disable_lighting": self.no_lighting,
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"sh_noheader": self.sh_disableheader,
+				"bake_tile_texture_count": self.bake_tile_texture_count,
+				"bake_back_faces": self.bake_unseen_faces,
+				"bake_unseen_sides": self.bake_unseen_faces,
+				"bake_ignore_tilesize": self.bake_ignore_tilesize,
 			}
 		)
 
@@ -451,9 +473,13 @@ class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 			params = {
 				"sh_vrmultiply": self.sh_vrmultiply,
 				"sh_exportmode": self.sh_exportmode,
-				"disable_lighting": self.nolighting,
+				"disable_lighting": self.no_lighting,
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"sh_noheader": self.sh_disableheader,
+				"bake_tile_texture_count": self.bake_tile_texture_count,
+				"bake_back_faces": self.bake_unseen_faces,
+				"bake_unseen_sides": self.bake_unseen_faces,
+				"bake_ignore_tilesize": self.bake_ignore_tilesize,
 			}
 		)
 

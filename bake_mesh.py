@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Dataverktyg för konvertera Smash Hit segment till meshfil
+Tool for baking a Smash Hit mesh - v0.7.0
 """
 
 import struct
@@ -9,9 +9,23 @@ import sys
 import xml.etree.ElementTree as et
 import random # temporary
 
-defaults = {}
 TILE_ROWS = 8
 TILE_COLS = 8
+
+BAKE_BACK_FACES = False
+BAKE_UNSEEN_FACES = False
+BAKE_IGNORE_TILESIZE = False
+
+def removeEverythingEqualTo(array, value):
+	"""
+	Remove everything in an array equal to a value
+	"""
+	
+	while (True):
+		try:
+			array.remove(value)
+		except ValueError:
+			return array
 
 class Vector3:
 	"""
@@ -24,15 +38,28 @@ class Vector3:
 		self.z = z
 	
 	@classmethod
-	def fromString(self, string):
+	def fromString(self, string, many = False):
+		"""
+		Convert a vector or list of vectors from a string to a vector object
+		"""
+		
 		cmpnames = ['x', 'y', 'z', 'a']
 		
-		array = string.split(" ")
+		array = removeEverythingEqualTo(string.split(" "), "")
 		array = [float(array[i]) for i in range(len(array))]
+		
+		# Handle overloaded string array
+		if (many and len(array) % 3 != 0):
+			vectors = []
+			
+			for i in range(len(array) // 3):
+				vectors.append(Vector3(array[i * 3 + 0], array[i * 3 + 1], array[i * 3 + 2]))
+			
+			return vectors
 		
 		vec = Vector3()
 		
-		for i in range(len(array)):
+		for i in range(min(len(array), 4)):
 			setattr(vec, cmpnames[i], array[i])
 		
 		return vec
@@ -62,24 +89,51 @@ class Vector3:
 	def diff(self, other):
 		return (self.x == other.x, self.y == other.y, self.z == other.z)
 	
+	def withLight(self, light):
+		"""
+		Return a copy of self with a component set
+		"""
+		v = self.copy()
+		v.a = light
+		return v
+	
 	def partialOpposite(self, ax, ay, az):
 		"""
 		Negate part of the vector (only some compnents, those for which aC is True)
 		"""
 		return Vector3(self.x if not ax else -self.x, self.y if not ay else -self.y, self.z if not az else -self.z)
 
+def parseIntTriplet(string):
+	"""
+	Parse either a single int or three ints in a string to a tuple of three ints
+	"""
+	
+	array = removeEverythingEqualTo(string.split(" "), "")
+	array = [int(array[i]) for i in range(len(array))]
+	
+	if (len(array) < 3):
+		c = len(array) - 1
+		
+		for _ in range(c, 3):
+			array.append(array[c])
+	
+	return (array[0], array[1], array[2])
+
 class SegmentInfo:
 	"""
 	Info about the segment and its global information.
 	"""
 	
-	def __init__(self, attribs):
-		self.front = float(attribs.get("lightFront", "1.0"))
-		self.back = float(attribs.get("lightBack", "1.0"))
-		self.left = float(attribs.get("lightLeft", "1.0"))
-		self.right = float(attribs.get("lightRight", "1.0"))
-		self.top = float(attribs.get("lightTop", "1.0"))
-		self.bottom = float(attribs.get("lightBottom", "1.0"))
+	def __init__(self, attribs, templates = None):
+		self.template = attribs.get("template", None)
+		self.lightFactor = float(attribs.get("meshbake_lightFactor", "1"))
+		
+		self.front = float(getFromTemplate(attribs, templates, self.template, "lightFront", "1.0")) * self.lightFactor
+		self.back = float(getFromTemplate(attribs, templates, self.template, "lightBack", "1.0")) * self.lightFactor
+		self.left = float(getFromTemplate(attribs, templates, self.template, "lightLeft", "1.0")) * self.lightFactor
+		self.right = float(getFromTemplate(attribs, templates, self.template, "lightRight", "1.0")) * self.lightFactor
+		self.top = float(getFromTemplate(attribs, templates, self.template, "lightTop", "1.0")) * self.lightFactor
+		self.bottom = float(getFromTemplate(attribs, templates, self.template, "lightBottom", "1.0")) * self.lightFactor
 
 def meshPointBytes(x, y, z, u, v, r, g, b, a):
 	"""
@@ -193,7 +247,7 @@ def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile = 0,
 	
 	# Swap axis sizes
 	if (swap):
-		ssize, tsize = tsize, ssize
+		s_size, t_size = t_size, s_size
 	
 	ax_e = "Axis was not property selected if this value is used." # e for Excluded axis
 	ax_s = 's'
@@ -291,13 +345,37 @@ class Box:
 	Very simple container for box data
 	"""
 	
-	def __init__(self, seg, pos, size, colour = Vector3(1.0, 1.0, 1.0), tile = 0, tileSize = Vector3(1.0, 1.0, 0.0)):
+	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = Vector3(1.0, 1.0, 0.0)):
+		"""
+		seg: global segment context
+		pos: position
+		size: size of the box
+		colour: list or tuple of the face colours of the box
+		tile: list or tuple of tiles to use
+		tileSize: size of the box tiles
+		"""
+		
+		# Expand shorthands
+		if (type(colour) == Vector3):
+			colour = [colour]
+		
+		if (len(colour) == 1):
+			colour = [colour[0], colour[0], colour[0]]
+		
+		if (len(tile) == 1):
+			tile = (tile[0], tile[0], tile[0])
+		
+		# Set attributes
 		self.segment_info = seg
 		self.pos = pos
 		self.size = size
 		self.colour = colour
 		self.tile = tile
-		self.tileSize = tileSize
+		self.tileSize = tileSize # TODO: this is not the same as tileSize in smashhit, fix that
+		
+		if (BAKE_IGNORE_TILESIZE):
+			self.tileSize.x = 1.0
+			self.tileSize.y = 1.0
 	
 	def bakeGeometry(self):
 		"""
@@ -308,7 +386,7 @@ class Box:
 		# happening.
 		
 		# Shorthands
-		tileSize, colour, tile, seg = self.tileSize, self.colour, self.tile, self.segment_info
+		pos, tileSize, colour, tile, seg = self.pos, self.tileSize, self.colour, self.tile, self.segment_info
 		
 		# Get the eight points (verticies) of the cube
 		p1 = self.size.partialOpposite(False, False, False)
@@ -321,12 +399,31 @@ class Box:
 		p8 = self.size.partialOpposite(True , True , False)
 		
 		# Compute the quads (note the min/max don't matter so long as its a square)
-		quads  = generateSubdividedGeometry(p1, p6, tileSize.x, tileSize.y, colour * seg.top, tile) # top
-		quads += generateSubdividedGeometry(p4, p7, tileSize.x, tileSize.y, colour * seg.bottom, tile) # bottom
-		quads += generateSubdividedGeometry(p1, p3, tileSize.x, tileSize.y, colour * seg.left, tile) # left
-		quads += generateSubdividedGeometry(p5, p7, tileSize.x, tileSize.y, colour * seg.right, tile) # right
-		quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour * seg.front, tile) # front
-		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour * seg.back, tile) # back
+		# Only some are baked based on config settings
+		quads  = []
+		
+		# Right
+		if (BAKE_UNSEEN_FACES or pos.x < 0.0):
+			quads += generateSubdividedGeometry(p1, p3, tileSize.x, tileSize.y, colour[0].withLight(seg.right), tile[0])
+		
+		# Left
+		if (BAKE_UNSEEN_FACES or pos.x > 0.0):
+			quads += generateSubdividedGeometry(p5, p7, tileSize.x, tileSize.y, colour[0].withLight(seg.left), tile[0])
+		
+		# Top
+		if (BAKE_UNSEEN_FACES or pos.y < 1.0):
+			quads += generateSubdividedGeometry(p1, p6, tileSize.x, tileSize.y, colour[1].withLight(seg.top), tile[1])
+		
+		# Bottom
+		if (BAKE_UNSEEN_FACES or pos.y > 1.0):
+			quads += generateSubdividedGeometry(p4, p7, tileSize.x, tileSize.y, colour[1].withLight(seg.bottom), tile[1])
+		
+		# Front
+		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour[2].withLight(seg.front), tile[2])
+		
+		# Back
+		if (BAKE_BACK_FACES):
+			quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour[2].withLight(seg.back), tile[2])
 		
 		# Translation transform
 		for q in quads:
@@ -334,8 +431,6 @@ class Box:
 			q.p2 += self.pos
 			q.p3 += self.pos
 			q.p4 += self.pos
-		
-		#print("\n\n\n")
 		
 		return quads
 
@@ -370,9 +465,19 @@ def writeMeshBinary(data, path):
 	f.write(outdata)
 	f.close()
 
-def parseXml(data):
+def getFromTemplate(boxattr, template_list, template, attr, default):
 	"""
-	Parse a segment XML document for boxes
+	Get an attribute from the template or object
+	"""
+	
+	res = boxattr.get(attr, template_list.get(template, {}).get(attr, default))
+	
+	return res
+
+def parseXml(data, templates = {}):
+	"""
+	Parse a segment XML document for boxes. Templates are resolved at this point.
+	Even if there are no templates to be loaded, templates must be a dictionary.
 	"""
 	
 	root = et.fromstring(data)
@@ -381,31 +486,55 @@ def parseXml(data):
 	if (root.tag != "segment"):
 		return None
 	
-	seg = SegmentInfo(root.attrib)
+	seg = SegmentInfo(root.attrib, templates)
 	
+	# Create a box for each box in the segment
 	for e in root:
 		if (e.tag == "box"):
 			a = e.attrib
-			if (a.get("visible", "0") != "0"):
-				boxes.append(
-					Box(
-						seg,
-						Vector3.fromString(a.get("pos", "0 0 0")),
-						Vector3.fromString(a.get("size", "1 1 1")),
-						Vector3.fromString(a.get("color", "1 1 1")),
-						int(a.get("tile", "0")),
-						Vector3.fromString(a.get("tileSize", "1 1")),
-					)
-				)
+			t = a.get("template", None)
+			
+			if (getFromTemplate(a, templates, t, "visible", "1") != "0"):
+				# Get properties
+				pos = Vector3.fromString(getFromTemplate(a, templates, t, "pos", "0 0 0"))
+				size = Vector3.fromString(getFromTemplate(a, templates, t, "size", "0.5 0.5 0.5"))
+				colour = Vector3.fromString(getFromTemplate(a, templates, t, "color", "1 1 1"), True)
+				tile = parseIntTriplet(getFromTemplate(a, templates, t, "tile", "0"))
+				tileSize = Vector3.fromString(getFromTemplate(a, templates, t, "tileSize", "1 1"))
+				
+				boxes.append(Box(seg, pos, size, colour, tile, tileSize))
 	
 	return boxes
 
-def bakeMesh(data, path):
+def parseTemplatesXml(path):
+	"""
+	Load templates from a file
+	"""
+	
+	result = {}
+	
+	tree = et.parse(path)
+	root = tree.getroot()
+	
+	assert("templates" == root.tag)
+	
+	# Loop over templates in XML file and load them
+	for child in root:
+		assert("template" == child.tag)
+		
+		name = child.attrib["name"]
+		attribs = child[0].attrib
+		
+		result[name] = attribs
+	
+	return result
+
+def bakeMesh(data, path, templates_path = None):
 	"""
 	Bake a mesh from Smash Hit segment data
 	"""
 	
-	boxes = parseXml(data)
+	boxes = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
 	
 	meshData = []
 	
@@ -414,12 +543,12 @@ def bakeMesh(data, path):
 	
 	writeMeshBinary(meshData, path)
 
-def main(input_file, output_file):
+def main(input_file, output_file, template_file = None):
 	f = open(input_file, "r")
 	content = f.read()
 	f.close()
 	
-	bakeMesh(content, output_file)
+	bakeMesh(content, output_file, template_file)
 
 if (__name__ == "__main__"):
-	main(sys.argv[1], sys.argv[2])
+	main(sys.argv[1], sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)
