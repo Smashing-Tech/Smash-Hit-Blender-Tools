@@ -8,8 +8,8 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 7),
-	"blender": (2, 83, 0),
+	"version": (1, 99, 8),
+	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
 	"wiki_url": "https://smashingmods.fandom.com/wiki/Knot126/Smash_Hit_Blender_Tools",
@@ -26,6 +26,7 @@ import os
 import os.path as ospath
 import importlib.util as imut
 import bake_mesh
+import obstacle_db
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
@@ -41,7 +42,7 @@ def sh_create_root(scene, params):
 	size = {"X": scene.sh_len[0], "Y": scene.sh_len[1], "Z": scene.sh_len[2]}
 	
 	# VR Multiply setting
-	if (params["sh_vrmultiply"] > 1.05):
+	if (params["sh_vrmultiply"] != 1.0):
 		size["Z"] = size["Z"] * params["sh_vrmultiply"]
 	
 	# Initial segment properties, like size
@@ -96,7 +97,7 @@ def sh_add_object(level_root, scene, obj, params):
 	
 	# Type for obstacles
 	if (obj.sh_properties.sh_type == "OBS"):
-		properties["type"] = obj.sh_properties.sh_obstacle
+		properties["type"] = obj.sh_properties.sh_obstacle_chooser if obj.sh_properties.sh_use_chooser else obj.sh_properties.sh_obstacle
 	
 	# Type for power-ups
 	if (obj.sh_properties.sh_type == "POW"):
@@ -129,8 +130,15 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["template"] = obj.sh_properties.sh_template
 	
 	# Add mode appearance tag
-	if (obj.sh_properties.sh_type == "OBS" and obj.sh_properties.sh_mode and obj.sh_properties.sh_mode != "0"):
-		properties["mode"] = obj.sh_properties.sh_mode
+	if (obj.sh_properties.sh_type == "OBS"):
+		mask = 0b0
+		
+		for v in [("training", 1), ("classic", 2), ("expert", 4), ("zen", 8), ("versus", 16), ("coop", 32)]:
+			if (v[0] in obj.sh_properties.sh_mode):
+				mask |= v[1]
+		
+		if (mask != 0b111111):
+			properties["mode"] = str(mask)
 	
 	# Add reflection property for boxes if not default
 	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_reflective):
@@ -251,6 +259,8 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 			continue
 		
 		params["isLast"] = False
+		
+		# NOTE: This hack doesn't work if the last object isn't visible.
 		if (i == (len(bpy.data.objects) - 1)):
 			params["isLast"] = True
 		
@@ -258,7 +268,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	
 	# Write the file
 	
-	file_header = "<!-- Exported with Smash Hit Blender Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
+	file_header = "<!-- Exported with Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
 	if (params["sh_noheader"]):
 		file_header = ""
 	content = file_header + et.tostring(level_root, encoding = "unicode")
@@ -278,7 +288,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
 			bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	except FileNotFoundError:
-		print("Warning: Templates file may not have been found.")
+		print("Warning: Bake mesh had a FileNotFoundError.")
 	
 	# Write out file
 	if (not compress):
@@ -356,7 +366,7 @@ class ExportHelper2:
 		
 		change_ext = False
 		
-		if self.check_extension is not None:
+		if self.check_extension is not None and self.check_extension:
 			if not self.filepath.endswith(self.filename_ext):
 				self.filepath += self.filename_ext
 				change_ext = True
@@ -388,6 +398,7 @@ class sh_ExportCommon:
 		name = "Template",
 		description = "A relitive or full path to a template file. This is used for baking meshes",
 		default = "",
+		subtype = "FILE_PATH",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
@@ -490,7 +501,8 @@ def sh_draw_export_gz(self, context):
 ## The following things are related to the importer, which is not complete.
 
 def sh_add_box(pos, size):
-	bpy.ops.mesh.primitive_cube_add(location = (pos[0], pos[1], pos[2]), scale = (size[0] * 2, size[1] * 2, size[2] * 2))
+	bpy.ops.mesh.primitive_cube_add(size = 1.0, location = (pos[0], pos[1], pos[2]), scale = (size[0] * 2, size[1] * 2, size[2] * 2))
+	return bpy.data.objects[-1] # return newest object
 
 def sh_add_empty():
 	o = bpy.data.objects.new("empty", None)
@@ -502,7 +514,25 @@ def sh_add_empty():
 	
 	return o
 
+def sh_import_modes(s):
+	"""
+	Import a mode string
+	"""
+	
+	mask = int(s)
+	res = set()
+	
+	for v in [("training", 1), ("classic", 2), ("expert", 4), ("zen", 8), ("versus", 16), ("coop", 32)]:
+		if ((mask & v[1]) == v[1]):
+			res.add(v[0])
+	
+	return res
+
 def sh_import_segment(fp, context, compressed = False):
+	"""
+	Load a Smash Hit segment into blender
+	"""
+	
 	root = None
 	
 	if (not compressed):
@@ -515,42 +545,72 @@ def sh_import_segment(fp, context, compressed = False):
 	root = et.fromstring(root)
 	
 	scene = context.scene.sh_properties
+	segattr = root.attrib
 	
 	# Segment length
-	seg_size = root.attrib.get("size", "12 10 0").split(" ")
-	scene.sh_len = float(seg_size[0]), float(seg_size[1]), float(seg_size[2])
+	seg_size = segattr.get("size", "12 10 0").split(" ")
+	scene.sh_len = (float(seg_size[0]), float(seg_size[1]), float(seg_size[2]))
 	
 	# Segment template
-	scene.sh_template = root.attrib.get("template", "")
+	scene.sh_template = segattr.get("template", "")
+	
+	# Soft shadow
+	scene.sh_softshadow = float(segattr.get("softshadow", "-0.0001"))
+	
+	# Lights
+	scene.sh_light = (float(segattr.get("lightLeft", "1")), float(segattr.get("lightRight", "1")), float(segattr.get("lightTop", "1")), float(segattr.get("lightBottom", "1")), float(segattr.get("lightFront", "1")), float(segattr.get("lightBack", "1")))
+	
+	# MeshBake light factor (legacy option)
+	scene.sh_lightfactor = float(segattr.get("meshbake_lightFactor", "1"))
 	
 	for obj in root:
 		kind = obj.tag
 		properties = obj.attrib
 		
 		# Ignore obstacles exported with IMPORT_IGNORE="STONEHACK_IGNORE"
-		if (   properties.get("IMPORT_IGNORE") == "STONEHACK_IGNORE"
-		    or properties.get("type") == "stone"):
+		if (properties.get("IMPORT_IGNORE") == "STONEHACK_IGNORE" or properties.get("type") == "stone"):
 			continue
 		
 		# Object position
 		pos = properties.get("pos", "0 0 0").split(" ")
-		pos = float(pos[2]), float(pos[0]), float(pos[1])
+		pos = (float(pos[2]), float(pos[0]), float(pos[1]))
 		
 		# Object rotation
 		rot = properties.get("rot", "0 0 0").split(" ")
-		rot = float(rot[2]), float(rot[0]), float(rot[1])
+		rot = (float(rot[2]), float(rot[0]), float(rot[1]))
 		
 		# Boxes
 		if (kind == "box"):
 			# Size for boxes
 			size = properties.get("size", "0.5 0.5 0.5").split(" ")
-			size = float(size[2]), float(size[0]), float(size[1])
-			
-			# Boxes can (and often do) have templates
-			# o.sh_properties.sh_template = properties.get("template", "")
+			size = (float(size[2]), float(size[0]), float(size[1]))
 			
 			# Add the box
-			sh_add_box(pos, size)
+			b = sh_add_box(pos, size)
+			
+			# Boxes can (and often do) have templates
+			b.sh_properties.sh_template = properties.get("template", "")
+			
+			# Reflective property
+			b.sh_properties.sh_reflective = (properties.get("reflection", "0") == "1")
+			
+			# visible, colour, tile for boxes
+			# NOTE: Tile size and rotation are not supported those are not imported yet
+			# NOTE: Extra template logic is here because built-in box baking tools will only
+			# inherit visible from template when visible is not set at all, and since
+			# it is not possible to tell blender tools to explicitly inherit from
+			# a template we need to settle with less than ideal but probably the most
+			# intuitive behaviour in order to have box templates work: we do not
+			# include visible if there is a template and visible is not set.
+			b.sh_properties.sh_visible = (properties.get("visible", "1") == "1" and not b.sh_properties.sh_template)
+			
+			# NOTE: colorX/Y/Z are from an old segment format
+			colour = properties.get("color", properties.get("colorX", "0.5 0.5 0.5")).split(" ")
+			b.sh_properties.sh_tint = (float(colour[0]), float(colour[1]), float(colour[2]), 1.0)
+			
+			# NOTE: tileX/Y/Z are from an old segment format
+			b.sh_properties.sh_tile = int(properties.get("tile", properties.get("tileX", "0")).split(" ")[0])
+		
 		# Obstacles
 		elif (kind == "obstacle"):
 			# Create obstacle and set pos/rot
@@ -562,7 +622,7 @@ def sh_import_segment(fp, context, compressed = False):
 			o.sh_properties.sh_type = "OBS"
 			o.sh_properties.sh_obstacle = properties.get("type", "")
 			o.sh_properties.sh_template = properties.get("template", "")
-			o.sh_properties.sh_mode = properties.get("mode", "0")
+			o.sh_properties.sh_mode = sh_import_modes(properties.get("mode", "63"))
 			o.sh_properties.sh_param0 = properties.get("param0", "")
 			o.sh_properties.sh_param1 = properties.get("param1", "")
 			o.sh_properties.sh_param2 = properties.get("param2", "")
@@ -576,6 +636,7 @@ def sh_import_segment(fp, context, compressed = False):
 			o.sh_properties.sh_param10 = properties.get("param10", "")
 			o.sh_properties.sh_param11 = properties.get("param11", "")
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
+		
 		# Decals
 		elif (kind == "decal"):
 			# Create obstacle and set pos/rot
@@ -588,15 +649,16 @@ def sh_import_segment(fp, context, compressed = False):
 			o.sh_properties.sh_decal = int(properties.get("tile", "0"))
 			
 			# Set the colourisation of the decal
-			color = properties.get("color", "NOCOLOR")
-			if (color != "NOCOLOR"):
+			colour = properties.get("color", "NOCOLOUR")
+			if (colour != "NOCOLOUR"):
 				o.sh_properties.sh_havetint = True
-				color = color.split(" ")
-				color = float(color[0]), float(color[1]), float(color[2])
-				o.sh_properties.sh_tint = color
+				colour = colour.split(" ")
+				colour = (float(colour[0]), float(colour[1]), float(colour[2]), float(colour[3]) if len(colour) == 4 else 1.0)
+				o.sh_properties.sh_tint = colour
 			
 			# Set the hidden flag
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
+		
 		# Power-ups
 		elif (kind == "powerup"):
 			# Create obstacle and set pos
@@ -609,18 +671,17 @@ def sh_import_segment(fp, context, compressed = False):
 			
 			# Set hidden
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
+		
 		# Water
 		elif (kind == "water"):
 			# Create obstacle and set pos
-			o = sh_add_empty()
-			o.location = pos
+			size = properties.get("size", "1 1").split(" ")
+			size = (float(size[1]), float(size[0]), 0.0)
+			
+			o = sh_add_box(pos, size)
 			
 			# Set the type
 			o.sh_properties.sh_type = "WAT"
-			
-			# Set water size
-			size = properties.get("size", "1 1").split(" ")
-			o.sh_properties.sh_size = float(size[0]), float(size[1])
 			
 			# Set hidden
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
@@ -634,6 +695,7 @@ class sh_import(bpy.types.Operator, ExportHelper2):
 	bl_idname = "sh.import"
 	bl_label = "Import Segment"
 	
+	check_extension = False
 	filename_ext = ".xml.mp3"
 	filter_glob = bpy.props.StringProperty(default='*.xml.mp3', options={'HIDDEN'}, maxlen=255)
 	
@@ -648,6 +710,7 @@ class sh_import_gz(bpy.types.Operator, ExportHelper2):
 	bl_idname = "sh.import_gz"
 	bl_label = "Import Compressed Segment"
 	
+	check_extension = False
 	filename_ext = ".xml.gz.mp3"
 	filter_glob = bpy.props.StringProperty(default='*.xml.gz.mp3', options={'HIDDEN'}, maxlen=255)
 	
@@ -706,7 +769,7 @@ class sh_SceneProperties(PropertyGroup):
 		max = 1.0
 		)
 
-# Object (obstacle/powerup/decal/water) properties
+# Object (box/obstacle/powerup/decal/water) properties
 
 class sh_EntityProperties(PropertyGroup):
 	
@@ -729,48 +792,72 @@ class sh_EntityProperties(PropertyGroup):
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
+	sh_use_chooser: BoolProperty(
+		name = "Use obstacle chooser",
+		description = "Use the obstacle chooser instead of typing the name by hand",
+		default = False,
+		)
+	
 	sh_obstacle: StringProperty(
 		name = "Obstacle",
-		description = "Name of the obstacle to be used",
+		description = "Type of obstacle to be used as a file name string",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
+		)
+	
+	sh_obstacle_chooser: EnumProperty(
+		name = "Obstacle",
+		description = "Type of obstacle to be used",
+		items = obstacle_db.OBSTACLES,
+		default = "scoretop",
 		)
 	
 	sh_powerup: EnumProperty(
 		name = "Power-up",
 		description = "The type of power-up that will appear",
-		items = [ ('ballfrenzy', "Ball Frenzy", "Allows the player infinite balls for some time"),
-				  ('slowmotion', "Slow Motion", "Slows down the game"),
-				  ('nitroballs', "Nitro Balls", "Turns balls into exposlives for a short period of time"),
-				  ('barrel', "Barrel", "Creates a large explosion which breaks glass (lefover from beta versions)"),
-				],
-		default = "ballfrenzy"
+		items = [
+			('ballfrenzy', "Ball Frenzy", "Allows the player infinite balls for some time"),
+			('slowmotion', "Slow Motion", "Slows down the game"),
+			('nitroballs', "Nitro Balls", "Turns balls into exposlives for a short period of time"),
+			None,
+			('barrel', "Barrel", "Creates a large explosion which breaks glass (lefover from beta versions)"),
+			('multiball', "Multi-ball", "Does not work anymore. Old power up that would enable five-ball multiball"),
+			('freebie', "Freebie", "Does not work anymore. Old power up found in binary strings but no known usage"),
+			('antigravity', "Anti-gravity", "Does not work anymore. Old power up that probably would have reversed gravity"),
+			('rewind', "Rewind", "Does not work anymore. Old power up that probably would have reversed time"),
+			('sheild', "Sheild", "Does not work anymore. Old power up that probably would have protected the player"),
+			('homing', "Homing", "Does not work anymore. Old power up that probably would have homed to obstacles"),
+			('life', "Life", "Does not work anymore. Old power up that gave the player a life"),
+			('balls', "Balls", "Does not work anymore. Old power up that gave the player ten balls"),
+		],
+		default = "ballfrenzy",
 		)
 	
 	sh_export: BoolProperty(
 		name = "Export object",
 		description = "If the object should be exported to the XML at all. Change \"hidden\" if you'd like it to be hidden but still present in the exported file",
-		default = True
+		default = True,
 		)
 	
 	sh_hidden: BoolProperty(
 		name = "Hidden",
 		description = "If the obstacle will show in the level",
-		default = False
+		default = False,
 		)
 	
 	sh_mode: EnumProperty(
 		name = "Mode",
-		description = "The game mode that the obstacle will be shown in (This is not currently very correct)",
-		items = [ ("0", "All Modes", ""),
-				  ("1", "Training", ""),
-				  ("2", "Classic", ""),
-				  ("3", "Mayhem", ""),
-				  ("4", "Zen", ""),
-				  ("5", "Versus", ""),
-				  ("6", "Co-op", ""),
-				],
-		default = "0"
+		options = {"ENUM_FLAG"},
+		description = "The game modes in which this obstacle should appear",
+		items = [
+			('training', "Training", "The easiest game mode which removes randomisation", 1),
+			('classic', "Classic", "The primary game mode in Smash Hit", 2),
+			('expert', "Mayhem", "The harder version of classic mode, with boss fights", 4),
+			('zen', "Zen", "A relaxing sandbox mode which removes hit detection", 8),
+			('versus', "Versus", "Two player versus mode where each player has their own ball count", 16),
+			('coop', "Co-op", "Two player co-op mode where both players share a ball count", 32),
+		],
+		default = {'training', 'classic', 'expert', 'zen', 'versus', 'coop'},
 		)
 	
 	##################
@@ -780,7 +867,7 @@ class sh_EntityProperties(PropertyGroup):
 	sh_visible: BoolProperty(
 		name = "Visible",
 		description = "If the box will appear in the exported mesh",
-		default = True
+		default = False
 		)
 	
 	sh_tile: IntProperty(
@@ -989,7 +1076,11 @@ class sh_ObstaclePanel(Panel):
 		
 		# Obstacle type for obstacles
 		if (sh_properties.sh_type == "OBS"):
-			layout.prop(sh_properties, "sh_obstacle")
+			layout.prop(sh_properties, "sh_use_chooser", toggle = 1)
+			if (sh_properties.sh_use_chooser):
+				layout.prop(sh_properties, "sh_obstacle_chooser")
+			else:
+				layout.prop(sh_properties, "sh_obstacle")
 		
 		# Decal number for decals
 		if (sh_properties.sh_type == "DEC"):
@@ -1035,18 +1126,19 @@ class sh_ObstaclePanel(Panel):
 		
 		# Paramaters for boxes
 		if (sh_properties.sh_type == "OBS"):
-			layout.prop(sh_properties, "sh_param0")
-			layout.prop(sh_properties, "sh_param1")
-			layout.prop(sh_properties, "sh_param2")
-			layout.prop(sh_properties, "sh_param3")
-			layout.prop(sh_properties, "sh_param4")
-			layout.prop(sh_properties, "sh_param5")
-			layout.prop(sh_properties, "sh_param6")
-			layout.prop(sh_properties, "sh_param7")
-			layout.prop(sh_properties, "sh_param8")
-			layout.prop(sh_properties, "sh_param9")
-			layout.prop(sh_properties, "sh_param10")
-			layout.prop(sh_properties, "sh_param11")
+			layout.label(text = "Properties")
+			layout.prop(sh_properties, "sh_param0", text = "")
+			layout.prop(sh_properties, "sh_param1", text = "")
+			layout.prop(sh_properties, "sh_param2", text = "")
+			layout.prop(sh_properties, "sh_param3", text = "")
+			layout.prop(sh_properties, "sh_param4", text = "")
+			layout.prop(sh_properties, "sh_param5", text = "")
+			layout.prop(sh_properties, "sh_param6", text = "")
+			layout.prop(sh_properties, "sh_param7", text = "")
+			layout.prop(sh_properties, "sh_param8", text = "")
+			layout.prop(sh_properties, "sh_param9", text = "")
+			layout.prop(sh_properties, "sh_param10", text = "")
+			layout.prop(sh_properties, "sh_param11", text = "")
 		
 		# Option to export object or not
 		layout.prop(sh_properties, "sh_export")

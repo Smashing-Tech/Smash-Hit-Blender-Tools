@@ -1,1 +1,1 @@
-__all__ = ["blender_tools"]
+__all__ = ["blender_tools", "bake_mesh"]
