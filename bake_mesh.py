@@ -12,6 +12,11 @@ import random # temporary
 TILE_ROWS = 8
 TILE_COLS = 8
 
+# I don't know why it's this constant specifically, but you can find 0.00390625
+# in LitMesh::addBox which is TILE_BITE_ROW / TILE_ROWS (and COLS too)
+TILE_BITE_ROW = 0.03125
+TILE_BITE_COL = 0.03125
+
 BAKE_BACK_FACES = False
 BAKE_UNSEEN_FACES = False
 BAKE_IGNORE_TILESIZE = False
@@ -167,17 +172,21 @@ def meshIndexBytes(i0, i1, i2):
 	
 	return c
 
-def getTextureCoords(rows, cols, tile):
+def getTextureCoords(rows, cols, bite_row, bite_col, tile):
 	"""
-	Gets the texture coordinates given the tile number
+	Gets the texture coordinates given the tile number.
+	
+	The tile bite is a small region of the tile that is clipped off.
 	
 	Returns ((u1, v1), (u2, v2), (u3, v3), (u4, v4))
 	"""
 	
-	u = (tile % rows) / rows
-	v = (tile // rows) / cols
-	w = 1 / rows
-	h = 1 / cols
+	bite_row = (bite_row / rows)
+	bite_col = (bite_col / cols)
+	u = ((tile % rows) / rows) + bite_row
+	v = ((tile // rows) / cols) + bite_col
+	w = (1 / rows) - (2 * bite_row)
+	h = (1 / cols) - (2 * bite_col)
 	
 	return ((u, v), (u, v + h), (u + w, v + h), (u + w, v))
 
@@ -206,7 +215,7 @@ class Quad:
 		"""
 		
 		p1, p2, p3, p4, col = self.p1, self.p2, self.p3, self.p4, self.colour
-		tex = getTextureCoords(TILE_ROWS, TILE_COLS, self.tile)
+		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tile)
 		
 		vertexes = b''
 		vertexes += meshPointBytes(p1.x, p1.y, p1.z, tex[0][0], tex[0][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1)

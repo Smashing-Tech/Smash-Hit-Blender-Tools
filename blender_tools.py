@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 8),
+	"version": (1, 99, 9),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -283,6 +283,8 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		if (params["sh_exportmode"] == "Mesh"):
 			bake_mesh.TILE_COLS = params["bake_tile_texture_count"][0]
 			bake_mesh.TILE_ROWS = params["bake_tile_texture_count"][1]
+			bake_mesh.TILE_BITE_COL = params["bake_tile_texture_cutoff"][0]
+			bake_mesh.TILE_BITE_ROW = params["bake_tile_texture_cutoff"][1]
 			bake_mesh.BAKE_BACK_FACES = params.get("bake_back_faces", False)
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
 			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
@@ -417,6 +419,15 @@ class sh_ExportCommon:
 		max = 32,
 		)
 	
+	bake_tile_texture_cutoff: FloatVectorProperty(
+		name = "Tile texture cutoff",
+		description = "For mesh bake only: The region around the tile texture that will be cut off",
+		size = 2,
+		default = (0.03125, 0.03125),
+		min = 0.0,
+		max = 0.0625,
+		)
+	
 	no_lighting: BoolProperty(
 		name = "Disable lighting",
 		description = "For bake mesh only: Disables vertex per-face vertex lighting",
@@ -456,6 +467,7 @@ class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"sh_noheader": self.sh_disableheader,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
+				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
@@ -488,6 +500,7 @@ class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"sh_noheader": self.sh_disableheader,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
+				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
