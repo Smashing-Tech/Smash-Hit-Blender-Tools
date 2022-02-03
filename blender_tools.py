@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 11),
+	"version": (1, 99, 12),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -58,9 +58,6 @@ def sh_create_root(scene, params):
 	if (scene.sh_light[3] != 1.0): seg_props["lightBottom"] = str(scene.sh_light[3])
 	if (scene.sh_light[4] != 1.0): seg_props["lightFront"] = str(scene.sh_light[4])
 	if (scene.sh_light[5] != 1.0): seg_props["lightBack"] = str(scene.sh_light[5])
-	
-	if (params["disable_lighting"]):
-		seg_props["meshbake_disableLight"] = "1"
 	
 	# Check for the template attrib and set
 	if (scene.sh_template):
@@ -290,6 +287,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 			bake_mesh.BAKE_BACK_FACES = params.get("bake_back_faces", False)
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
 			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
+			bake_mesh.DISABLE_LIGHT = params.get("disable_lighting", False)
 			bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	except FileNotFoundError:
 		print("Warning: Bake mesh had a FileNotFoundError.")

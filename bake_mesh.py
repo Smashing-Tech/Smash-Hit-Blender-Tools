@@ -1,25 +1,44 @@
 #!/usr/bin/python3
 """
-Tool for baking a Smash Hit mesh - v0.8.0
+Tool for baking a Smash Hit mesh
 """
 
 import struct
 import zlib
 import sys
 import xml.etree.ElementTree as et
-import random # temporary
+import random
 
+# Version of mesh baker; this is not used anywhere.
+VERSION = (0, 8, 1)
+
+# The number of rows and columns in the tiles.mtx.png file. Change this if you
+# have overloaded the file with more tiles; note that you will also need to
+# rebake other segments with the same row/column setting.
 TILE_ROWS = 8
 TILE_COLS = 8
 
-# I don't know why it's this constant specifically, but you can find 0.00390625
-# in LitMesh::addBox which is TILE_BITE_ROW / TILE_ROWS (and COLS too)
+# The amount of a tile that should be clipped off the edges. This mostly done to
+# hide hard edges between tile textures.
+# 
+# I don't know why it's this constant by default specifically, but you can
+# find 0.00390625 in LitMesh::addBox which is TILE_BITE_ROW / TILE_ROWS (and
+# COLS too)
 TILE_BITE_ROW = 0.03125
 TILE_BITE_COL = 0.03125
 
+# Disable or enable baking unseen and back faces. Note that unseen faces does
+# includes back faces, so both must be enabled for those.
 BAKE_BACK_FACES = False
 BAKE_UNSEEN_FACES = False
+
+# Ignore the tileSize attribute, defaulting to the single unit tile, which can
+# be misinterprted on some segments.
 BAKE_IGNORE_TILESIZE = False
+
+# Disables the use of the shadow attribute (though it will still be computed)
+# This option only exsists for segments that were baked with legacy MeshBake v0.2.0
+DISABLE_LIGHT = False
 
 def removeEverythingEqualTo(array, value):
 	"""
@@ -146,7 +165,7 @@ def correctColour(r, g, b, a):
 	understanding.
 	"""
 	
-	return r * 0.5, g * 0.5, b * 0.5, a
+	return r * 0.5, g * 0.5, b * 0.5, a if not DISABLE_LIGHT else 1.0
 
 def meshPointBytes(x, y, z, u, v, r, g, b, a):
 	"""
@@ -441,7 +460,7 @@ class Box:
 		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour[2].withLight(seg.front), tile[2])
 		
 		# Back
-		if (BAKE_BACK_FACES):
+		if (BAKE_BACK_FACES and BAKE_UNSEEN_FACES):
 			quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour[2].withLight(seg.back), tile[2])
 		
 		# Translation transform
