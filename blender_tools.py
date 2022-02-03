@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 10),
+	"version": (1, 99, 11),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -24,6 +24,7 @@ import gzip
 import json
 import os
 import os.path as ospath
+import tempfile
 import importlib.util as imut
 import bake_mesh
 import obstacle_db
@@ -164,8 +165,12 @@ def sh_add_object(level_root, scene, obj, params):
 				properties["param" + str(i)] = val
 	
 	# Set tint for decals
-	if (obj.sh_properties.sh_havetint and obj.sh_properties.sh_type == "DEC"):
+	if (obj.sh_properties.sh_type == "DEC" and obj.sh_properties.sh_havetint):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
+	
+	# Set blend for decals
+	if (obj.sh_properties.sh_type == "DEC" and obj.sh_properties.sh_blend != 1.0):
+		properties["blend"] = str(obj.sh_properties.sh_blend)
 	
 	if (obj.sh_properties.sh_type == "BOX"):
 		if (obj.sh_properties.sh_visible):
@@ -372,8 +377,50 @@ class ExportHelper2:
 		
 		return change_ext
 
-# Common values between export types
-class sh_ExportCommon:
+def tryTemplatesPath():
+	"""
+	Try to get the path of the templates.xml file automatically
+	"""
+	
+	print("Smash Hit Tools: Auto find templates invoked.")
+	
+	# Get the search path
+	search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
+	
+	print(f"Smash Hit Tools: Try to search in: \"{search_path}\"")
+	
+	# Enumerate files
+	dirs = os.listdir(search_path)
+	
+	# Search for templates.xml and set path
+	path = ""
+	
+	for d in dirs:
+		cand = search_path + "/" + d + "/assets/templates.xml.mp3"
+		
+		print(f"Smash Hit Tools: Try file: \"{cand}\"")
+		
+		if ospath.exists(cand):
+			path = cand
+			break
+	
+	print(f"Smash Hit Tools: Got file: \"{path}\"")
+	
+	return path
+
+class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
+	"""
+	Common code and values between export types
+	"""
+	
+	def __init__(self):
+		"""
+		Automatic templates.xml detection
+		"""
+		
+		if (not self.sh_meshbake_template):
+			self.sh_meshbake_template = tryTemplatesPath()
+	
 	sh_vrmultiply: FloatProperty(
 		name = "Segment strech",
 		description = "This option tries to strech the segment's depth. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work.",
@@ -395,7 +442,7 @@ class sh_ExportCommon:
 	
 	sh_meshbake_template: StringProperty(
 		name = "Template",
-		description = "A relitive or full path to a template file. This is used for baking meshes",
+		description = "A relitive or full path to a template file. This is used for baking meshes. If you use APK Editor Studio, the path to the file will be pre-filled on opening the dialogue",
 		default = "",
 		subtype = "FILE_PATH",
 		maxlen = SH_MAX_STR_LEN,
@@ -443,7 +490,7 @@ class sh_ExportCommon:
 		default = False
 		)
 
-class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
+class sh_export(sh_ExportCommon):
 	"""
 	Uncompressed segment export
 	"""
@@ -474,7 +521,7 @@ class sh_export(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
 def sh_draw_export(self, context):
 	self.layout.operator("sh.export", text="Segment (.xml.mp3)")
 
-class sh_export_gz(bpy.types.Operator, ExportHelper2, sh_ExportCommon):
+class sh_export_gz(sh_ExportCommon):
 	"""
 	Compressed segment export
 	"""
@@ -656,12 +703,17 @@ def sh_import_segment(fp, context, compressed = False):
 			o.sh_properties.sh_decal = int(properties.get("tile", "0"))
 			
 			# Set the colourisation of the decal
-			colour = properties.get("color", "NOCOLOUR")
-			if (colour != "NOCOLOUR"):
+			colour = properties.get("color", None)
+			if (colour):
 				o.sh_properties.sh_havetint = True
 				colour = colour.split(" ")
 				colour = (float(colour[0]), float(colour[1]), float(colour[2]), float(colour[3]) if len(colour) == 4 else 1.0)
 				o.sh_properties.sh_tint = colour
+			else:
+				o.sh_properties.sh_havetint = False
+			
+			# Blend mode
+			o.sh_properties.sh_blend = float(properties.get("blend", "1"))
 			
 			# Set the hidden flag
 			if (properties.get("hidden", "0") == "1"): o.sh_properties.sh_hidden = True
@@ -739,9 +791,10 @@ class sh_SceneProperties(PropertyGroup):
 	sh_len: FloatVectorProperty(
 		name = "Size",
 		description = "Segment size (Width, Height, Depth). Hint: Last paramater changes the length (depth) of the segment",
+		subtype = "XYZ",
 		default = (12.0, 10.0, 8.0), 
 		min = 0.0,
-		max = 750.0
+		max = 750.0,
 	) 
 	
 	sh_template: StringProperty(
@@ -1013,20 +1066,28 @@ class sh_EntityProperties(PropertyGroup):
 	sh_tint: FloatVectorProperty(
 		name = "Colour",
 		description = "The colour to be used for tinting, colouring and mesh data",
-		subtype = "COLOR",
+		subtype = "COLOR_GAMMA",
 		default = (0.5, 0.5, 0.5, 1.0), 
 		size = 4,
 		min = 0.0,
 		max = 1.0
 	)
 	
+	sh_blend: FloatProperty(
+		name = "Blend mode",
+		description = "How the colour of the decal and the existing colour will be blended. 1 = normal, 0 = added or numbers in between",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
+	)
+	
 	sh_size: FloatVectorProperty(
 		name = "Size",
-		description = "The size of the object when exported. For boxes this is the tileSize property. In the future, a plain should be used",
+		description = "The size of the object when exported. For boxes this is the tileSize property",
 		default = (1.0, 1.0), 
 		min = 0.0,
-		max = 128.0,
-		size = 2
+		max = 256.0,
+		size = 2,
 	)
 
 class sh_SegmentPanel(Panel):
@@ -1099,12 +1160,13 @@ class sh_ObstaclePanel(Panel):
 				layout.prop(sh_properties, "sh_tilerot")
 			layout.prop(sh_properties, "sh_reflective")
 		
-		# Colorization for decals
+		# Colourisation and blend for decals
 		if (sh_properties.sh_type == "DEC"):
 			layout.prop(sh_properties, "sh_havetint")
 			if (sh_properties.sh_havetint):
 				layout.prop(sh_properties, "sh_tint")
 				layout.prop(sh_properties, "sh_tintalpha")
+			layout.prop(sh_properties, "sh_blend")
 		
 		# Mode for obstacles
 		if (sh_properties.sh_type == "OBS"):
