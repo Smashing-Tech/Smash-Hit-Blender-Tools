@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 9),
+	"version": (1, 99, 10),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -50,16 +50,13 @@ def sh_create_root(scene, params):
 	   "size": str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	}
 	
-	# Lighting from KBT
+	# Lighting
 	if (scene.sh_light[0] != 1.0): seg_props["lightLeft"] = str(scene.sh_light[0])
 	if (scene.sh_light[1] != 1.0): seg_props["lightRight"] = str(scene.sh_light[1])
 	if (scene.sh_light[2] != 1.0): seg_props["lightTop"] = str(scene.sh_light[2])
 	if (scene.sh_light[3] != 1.0): seg_props["lightBottom"] = str(scene.sh_light[3])
 	if (scene.sh_light[4] != 1.0): seg_props["lightFront"] = str(scene.sh_light[4])
 	if (scene.sh_light[5] != 1.0): seg_props["lightBack"] = str(scene.sh_light[5])
-	
-	if (scene.sh_lightfactor != 0.666):
-		seg_props["meshbake_lightFactor"] = str(scene.sh_lightfactor)
 	
 	if (params["disable_lighting"]):
 		seg_props["meshbake_disableLight"] = "1"
@@ -573,9 +570,6 @@ def sh_import_segment(fp, context, compressed = False):
 	# Lights
 	scene.sh_light = (float(segattr.get("lightLeft", "1")), float(segattr.get("lightRight", "1")), float(segattr.get("lightTop", "1")), float(segattr.get("lightBottom", "1")), float(segattr.get("lightFront", "1")), float(segattr.get("lightBack", "1")))
 	
-	# MeshBake light factor (legacy option)
-	scene.sh_lightfactor = float(segattr.get("meshbake_lightFactor", "1"))
-	
 	for obj in root:
 		kind = obj.tag
 		properties = obj.attrib
@@ -772,14 +766,6 @@ class sh_SceneProperties(PropertyGroup):
 		min = 0.0,
 		max = 2.0,
 		size = 6,
-		)
-	
-	sh_lightfactor: FloatProperty(
-		name = "Light Factor",
-		description = "Changes the way that light is multiplied so that things do not look too bright",
-		default = 0.666,
-		min = 0.2,
-		max = 1.0
 		)
 
 # Object (box/obstacle/powerup/decal/water) properties
@@ -1063,7 +1049,6 @@ class sh_SegmentPanel(Panel):
 		layout.prop(sh_properties, "sh_template")
 		layout.prop(sh_properties, "sh_softshadow")
 		layout.prop(sh_properties, "sh_light")
-		layout.prop(sh_properties, "sh_lightfactor")
 		layout.separator()
 
 class sh_ObstaclePanel(Panel):

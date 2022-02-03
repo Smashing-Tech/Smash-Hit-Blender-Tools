@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-Tool for baking a Smash Hit mesh - v0.7.0
+Tool for baking a Smash Hit mesh - v0.8.0
 """
 
 import struct
@@ -131,19 +131,29 @@ class SegmentInfo:
 	
 	def __init__(self, attribs, templates = None):
 		self.template = attribs.get("template", None)
-		self.lightFactor = float(attribs.get("meshbake_lightFactor", "1"))
 		
-		self.front = float(getFromTemplate(attribs, templates, self.template, "lightFront", "1.0")) * self.lightFactor
-		self.back = float(getFromTemplate(attribs, templates, self.template, "lightBack", "1.0")) * self.lightFactor
-		self.left = float(getFromTemplate(attribs, templates, self.template, "lightLeft", "1.0")) * self.lightFactor
-		self.right = float(getFromTemplate(attribs, templates, self.template, "lightRight", "1.0")) * self.lightFactor
-		self.top = float(getFromTemplate(attribs, templates, self.template, "lightTop", "1.0")) * self.lightFactor
-		self.bottom = float(getFromTemplate(attribs, templates, self.template, "lightBottom", "1.0")) * self.lightFactor
+		self.front = float(getFromTemplate(attribs, templates, self.template, "lightFront", "1.0"))
+		self.back = float(getFromTemplate(attribs, templates, self.template, "lightBack", "1.0"))
+		self.left = float(getFromTemplate(attribs, templates, self.template, "lightLeft", "1.0"))
+		self.right = float(getFromTemplate(attribs, templates, self.template, "lightRight", "1.0"))
+		self.top = float(getFromTemplate(attribs, templates, self.template, "lightTop", "1.0"))
+		self.bottom = float(getFromTemplate(attribs, templates, self.template, "lightBottom", "1.0"))
+
+def correctColour(r, g, b, a):
+	"""
+	Do any final colour correction operations. For now, this just divides by two
+	snice the shader mutliplies the colour by two for some reason beyond our
+	understanding.
+	"""
+	
+	return r * 0.5, g * 0.5, b * 0.5, a
 
 def meshPointBytes(x, y, z, u, v, r, g, b, a):
 	"""
 	Return bytes for the point in the mesh
 	"""
+	
+	r, g, b, a = correctColour(r, g, b, a)
 	
 	c = b''
 	
