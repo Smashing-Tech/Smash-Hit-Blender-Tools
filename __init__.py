@@ -1,1 +1,1 @@
-__all__ = ["blender_tools", "bake_mesh"]
+__all__ = ["bake_mesh", "blender_tools", "obstacle_db", "uniformpoints"]

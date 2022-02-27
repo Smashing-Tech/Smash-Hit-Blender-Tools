@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 12),
+	"version": (1, 99, 13),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -287,7 +287,9 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 			bake_mesh.BAKE_BACK_FACES = params.get("bake_back_faces", False)
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
 			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
+			bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
 			bake_mesh.DISABLE_LIGHT = params.get("disable_lighting", False)
+			bake_mesh.ENABLE_TRACED_LIGHT = params.get("bake_raycast", False)
 			bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	except FileNotFoundError:
 		print("Warning: Bake mesh had a FileNotFoundError.")
@@ -471,8 +473,8 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 		)
 	
 	no_lighting: BoolProperty(
-		name = "Disable lighting",
-		description = "For bake mesh only: Disables vertex per-face vertex lighting",
+		name = "Disable lighting (deprecated)",
+		description = "For bake mesh only: Disables vertex per-face vertex lighting (do not use anymore)",
 		default = False
 		)
 	
@@ -485,6 +487,18 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	bake_ignore_tilesize: BoolProperty(
 		name = "Ignore tileSize parameter",
 		description = "For bake mesh only: Ignores the non-faithful interpretation of the tileSize argument in MeshBake and only allows for tileSize to have one or three numbers",
+		default = False
+		)
+	
+	bake_raycast: BoolProperty(
+		name = "Enable traced lighting (exprimental)",
+		description = "Enables per-vertex traced lighting if not already disabled by DISABLE_LIGHT. Note: This takes a VERY LONG time to complete and is currently not finished! Enable at your own risk! ..",
+		default = False
+		)
+	
+	bake_partymode: BoolProperty(
+		name = "Party mode (for debugging)",
+		description = "Randomises quad colours for debugging",
 		default = False
 		)
 
@@ -513,6 +527,8 @@ class sh_export(sh_ExportCommon):
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
+				"bake_raycast": self.bake_raycast,
+				"bake_partymode": self.bake_partymode,
 			}
 		)
 
@@ -546,6 +562,8 @@ class sh_export_gz(sh_ExportCommon):
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
+				"bake_raycast": self.bake_raycast,
+				"bake_partymode": self.bake_partymode,
 			}
 		)
 
