@@ -9,6 +9,7 @@ import sys
 import xml.etree.ElementTree as et
 import random
 import uniformpoints
+import math
 
 # Version of mesh baker; this is not used anywhere.
 VERSION = (0, 9, 0)
@@ -52,7 +53,7 @@ ENABLE_TRACED_LIGHT = True
 
 # The maxium distance that an object can be from another object in order to be
 # considered blocking light from getting to it.
-TRACED_LIGHT_DISTANCE = 0.95
+TRACED_LIGHT_DISTANCE = 0.96
 
 # Settings for distributing points on a unit hemisphere using the same
 # algotrithm that Smash Hit uses.
@@ -126,14 +127,56 @@ class Vector3:
 	def __sub__(self, other):
 		return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
 	
-	def __mul__(self, scalar):
-		return Vector3(scalar * self.x, scalar * self.y, scalar * self.z)
+	def __mul__(self, other):
+		if (type(other) == Vector3):
+			return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
+		else:
+			return Vector3(other * self.x, other * self.y, other * self.z)
 	
 	def __format__(self, _unused):
-		return f"[{self.x} {self.y} {self.z}]"
+		return f"{self.x} {self.y} {self.z}"
 	
 	def lengthSquared(self):
 		return self.x * self.x + self.y * self.y + self.z * self.z
+	
+	def length(self):
+		return math.sqrt(self.lengthSquared())
+	
+	def normalise(self):
+		length = self.length()
+		length = (1 / length) if not length <= 0.0 else 0.0
+		return Vector3(self.x * length, self.y * length, self.z * length)
+	
+	def cross(self, other):
+		x = self.y * other.z - self.z * other.y
+		y = self.z * other.x - self.x * other.z
+		z = self.x * other.y - self.y * other.x
+		return Vector3(x, y, z)
+	
+	def rotate_to(self, other):
+		"""
+		This implementation only works with axis aligned vectors. This will
+		rotate the current (self) to be as if the other were the up vector
+		(normal).
+		"""
+		
+		v = self.copy()
+		s = 'This axis shall be swapped with the y axis.'
+		a = 1.0
+		
+		# Find axis to be up
+		for c in ['x', 'y', 'z']:
+			a = getattr(other, c)
+			if (abs(a) > 0.5):
+				s = c
+				break
+		
+		# Swap with y in self, negate s-axis if y is negated
+		tmp_s = getattr(v, s)
+		setattr(v, s, v.y)
+		v.y = a * tmp_s
+		
+		return v
 	
 	def copy(self):
 		return Vector3(self.x, self.y, self.z)
@@ -190,49 +233,72 @@ class SegmentInfo:
 	
 	def raycast(self, origin, direction, max_distance = None):
 		"""
-		Send a raycast into the segment to see if any boxes are hit.
+		Send a raycast into the segment to see if any boxes are hit. Returns the
+		closest hit.
 		"""
 		
-		for b in self.boxes:
-			if (b.raycast(origin, direction, max_distance if max_distance else 1e26)):
-				return True
+		smallest = False
+		smallest_length = 1e26
 		
-		return False
+		for b in self.boxes:
+			result = b.raycast(origin, direction, max_distance)
+			
+			if (result):
+				length = (result - origin).length()
+				if (length < smallest_length):
+					smallest = result
+					smallest_length = length
+		
+		return smallest
 
-def doVertexLights(x, y, z, a, gc):
+def doVertexLights(x, y, z, a, gc, normal):
 	"""
 	Compute the light at a vertex
 	"""
 	
 	light = 0.0
 	
+	# TEST MODE
+	#if (normal.y != 1.0): return a
+	
 	# Check light availibility for vertex
 	for p in UNIT_SPHERE_POINTS:
 		# Check that the rays do not hit
-		if (not gc.raycast(Vector3(x, y + 0.02, z), Vector3(p.x, p.y, p.z), TRACED_LIGHT_DISTANCE)):
-			light += (1 / TRACED_LIGHT_POINTS)
+		origin = Vector3(x, y, z) + normal * 0.02
+		direction = Vector3(p.x, p.y, p.z).rotate_to(normal)
+		
+		# Raycast
+		result = gc.raycast(origin, direction, TRACED_LIGHT_DISTANCE)
+		
+		if (result):
+			light += max(direction * normal, 0.0)
+	
+	# Divide by light points
+	light *= (1 / TRACED_LIGHT_POINTS)
 	
 	# Return the final light value
-	return a * light
+	light = a * (1.0 - (light))
+	
+	return light
 
-def correctColour(x, y, z, r, g, b, a, gc):
+def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
 	Do any final colour correction operations and per-vertex lighting.
 	"""
 	
 	if (ENABLE_TRACED_LIGHT):
-		a = doVertexLights(x, y, z, a, gc)
+		a = doVertexLights(x, y, z, a, gc, normal)
 	
 	return r * 0.5, g * 0.5, b * 0.5, a if not DISABLE_LIGHT else 1.0
 
-def meshPointBytes(x, y, z, u, v, r, g, b, a, gc):
+def meshPointBytes(x, y, z, u, v, r, g, b, a, gc, normal):
 	"""
 	Return bytes for the point in the mesh
 	
 	gc is the segment context that contains the box list for lighting
 	"""
 	
-	r, g, b, a = correctColour(x, y, z, r, g, b, a, gc)
+	r, g, b, a = correctColour(x, y, z, r, g, b, a, gc, normal)
 	
 	c = b''
 	
@@ -284,7 +350,7 @@ class Quad:
 	Representation of a quadrelaterial (a shape with four sides)
 	"""
 	
-	def __init__(self, p1, p2, p3, p4, colour, tile, seg):
+	def __init__(self, p1, p2, p3, p4, colour, tile, seg, normal):
 		self.p1 = p1
 		self.p2 = p2
 		self.p3 = p3
@@ -292,6 +358,7 @@ class Quad:
 		self.colour = colour if not PARTY_MODE else Vector3.random()
 		self.tile = tile
 		self.seg = seg
+		self.normal = normal
 	
 	def __format__(self, _unused):
 		return f"{{ {self.p1} {self.p2} {self.p3} {self.p4} }}"
@@ -304,14 +371,14 @@ class Quad:
 		Returns tuple of (vertex bytes, index bytes, number of vertexes, number of indicies)
 		"""
 		
-		p1, p2, p3, p4, col, gc = self.p1, self.p2, self.p3, self.p4, self.colour, self.seg
+		p1, p2, p3, p4, col, gc, normal = self.p1, self.p2, self.p3, self.p4, self.colour, self.seg, self.normal
 		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tile)
 		
 		vertexes = b''
-		vertexes += meshPointBytes(p1.x, p1.y, p1.z, tex[0][0], tex[0][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc)
-		vertexes += meshPointBytes(p2.x, p2.y, p2.z, tex[1][0], tex[1][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc)
-		vertexes += meshPointBytes(p3.x, p3.y, p3.z, tex[2][0], tex[2][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc)
-		vertexes += meshPointBytes(p4.x, p4.y, p4.z, tex[3][0], tex[3][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc)
+		vertexes += meshPointBytes(p1.x, p1.y, p1.z, tex[0][0], tex[0][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
+		vertexes += meshPointBytes(p2.x, p2.y, p2.z, tex[1][0], tex[1][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
+		vertexes += meshPointBytes(p3.x, p3.y, p3.z, tex[2][0], tex[2][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
+		vertexes += meshPointBytes(p4.x, p4.y, p4.z, tex[3][0], tex[3][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
 		
 		index = [offset + 0, offset + 1, offset + 2, offset + 0, offset + 2, offset + 3]
 		
@@ -327,15 +394,15 @@ class Quad:
 		
 		return (vertexes, indexes, 4, 6)
 
-def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, seg):
+def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, seg, normal):
 	"""
 	Generates subdivided quadrelaterials for any given axis where the min/max
 	are not the same. Minest/maxist are the min/max of the quad and ssize and 
-	tsize are the size of the subdivisions. Swap controls if the s and t size
-	components should be swapped.
+	tsize are the size of the subdivisions. Colour and tile are the colour and
+	tile. The normal is the normal of the surface.
 	
-	In the future this will need to handle textures and colours (colours can
-	be done very easily I think).
+	TODO: The normal should be used to make tiles face the correct way (that is
+	correct winding order).
 	"""
 	
 	minest = minest.copy()
@@ -425,7 +492,7 @@ def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, seg
 			p4 = p1                + t_scunitpart
 			
 			# Finally make the quad
-			quads.append(Quad(p1, p2, p3, p4, colour, tile, seg))
+			quads.append(Quad(p1, p2, p3, p4, colour, tile, seg, normal))
 			
 			# Add new size to total count (for this major axis)
 			t_current += t_size
@@ -444,6 +511,16 @@ def sgn(x):
 	if (x >  0.0): return 1
 	if (x == 0.0): return 0
 	if (x <  0.0): return -1
+
+def dnz(x, y):
+	"""
+	Divide with non-panic zero handler
+	"""
+	
+	if (y == 0.0):
+		return None
+	else:
+		return x / y
 
 class Box:
 	"""
@@ -509,26 +586,26 @@ class Box:
 		
 		# Right
 		if (BAKE_UNSEEN_FACES or pos.x < 0.0):
-			quads += generateSubdividedGeometry(p1, p3, tileSize.x, tileSize.y, colour[0].withLight(seg.right), tile[0], seg)
+			quads += generateSubdividedGeometry(p1, p3, tileSize.x, tileSize.y, colour[0].withLight(seg.right), tile[0], seg, Vector3(0.0, 0.0, 1.0))
 		
 		# Left
 		if (BAKE_UNSEEN_FACES or pos.x > 0.0):
-			quads += generateSubdividedGeometry(p5, p7, tileSize.x, tileSize.y, colour[0].withLight(seg.left), tile[0], seg)
+			quads += generateSubdividedGeometry(p5, p7, tileSize.x, tileSize.y, colour[0].withLight(seg.left), tile[0], seg, Vector3(0.0, 0.0, -1.0))
 		
 		# Top
 		if (BAKE_UNSEEN_FACES or pos.y < 1.0):
-			quads += generateSubdividedGeometry(p1, p6, tileSize.x, tileSize.y, colour[1].withLight(seg.top), tile[1], seg)
+			quads += generateSubdividedGeometry(p1, p6, tileSize.x, tileSize.y, colour[1].withLight(seg.top), tile[1], seg, Vector3(0.0, 1.0, 0.0))
 		
 		# Bottom
 		if (BAKE_UNSEEN_FACES or pos.y > 1.0):
-			quads += generateSubdividedGeometry(p4, p7, tileSize.x, tileSize.y, colour[1].withLight(seg.bottom), tile[1], seg)
+			quads += generateSubdividedGeometry(p4, p7, tileSize.x, tileSize.y, colour[1].withLight(seg.bottom), tile[1], seg, Vector3(0.0, -1.0, 0.0))
 		
 		# Front
-		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour[2].withLight(seg.front), tile[2], seg)
+		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour[2].withLight(seg.front), tile[2], seg, Vector3(1.0, 0.0, 0.0))
 		
 		# Back
 		if (BAKE_BACK_FACES and BAKE_UNSEEN_FACES):
-			quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour[2].withLight(seg.back), tile[2], seg)
+			quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour[2].withLight(seg.back), tile[2], seg, Vector3(-1.0, 0.0, 0.0))
 		
 		# Translation transform
 		for q in quads:
@@ -539,64 +616,68 @@ class Box:
 		
 		return quads
 	
-	def raycast(self, origin, direction, max_distance):
+	def raycast(self, origin, direction, max_distance = None):
 		"""
 		Preform a raycast, only returning true/false. Max distance is in terms
 		of the length of the direction vector.
 		
 		Note: It's easier to dirive this from the equation of a box:
 			max(|x|, |y|, |z|) = r
+		
+		Unlike most ray and aabb tests this directly uses the fact that the |c|
+		must be greater than the absolute value of other components at that
+		point.
 		"""
 		
-		O_direction = direction
-		origin = origin.copy()
-		direction = direction.copy()
+		origin = origin - self.pos
 		
-		box_size = self.size
+		# Find intersection points
+		t00 = dnz((self.size.x - origin.x), direction.x)
+		t01 = dnz((self.size.y - origin.y), direction.y)
+		t02 = dnz((self.size.z - origin.z), direction.z)
+		t10 = dnz((-self.size.x - origin.x), direction.x)
+		t11 = dnz((-self.size.y - origin.y), direction.y)
+		t12 = dnz((-self.size.z - origin.z), direction.z)
 		
-		# Transform relative to box
-		origin -= self.pos
+		# Evaluate rays at points
+		r00 = (origin + (direction * t00)) if t00 != None else None
+		r01 = (origin + (direction * t01)) if t01 != None else None
+		r02 = (origin + (direction * t02)) if t02 != None else None
+		r10 = (origin + (direction * t10)) if t10 != None else None
+		r11 = (origin + (direction * t11)) if t11 != None else None
+		r12 = (origin + (direction * t12)) if t12 != None else None
 		
-		# Inverse of numbers (better to precompute because division is slow)
-		direction.x = (1 / direction.x) if direction.x != 0.0 else None
-		direction.y = (1 / direction.y) if direction.y != 0.0 else None
-		direction.z = (1 / direction.z) if direction.z != 0.0 else None
+		# Find the final solutions
+		final = False
+		final_t = max_distance
 		
-		# Initialise values
-		tpos = []
-		tneg = []
+		# This could have been done less verbosely, but probably sacrificing performance
+		# and some ease of writing
+		if (t00 != None and t00 >= 0.0 and abs(r00.x) >= abs(r00.y) and abs(r00.x) >= abs(r00.z) and t00 <= final_t):
+			final_t = t00
+			final = r00
 		
-		# Calculate candidate t-values
-		if (direction.x != None):
-			tpos.append((box_size.x - origin.x) * direction.x)
-			tneg.append((-box_size.x - origin.x) * direction.x)
+		if (t01 != None and t01 >= 0.0 and abs(r01.y) >= abs(r01.x) and abs(r01.y) >= abs(r01.z) and t01 <= final_t):
+			final_t = t01
+			final = r01
 		
-		if (direction.y != None):
-			tpos.append((box_size.y - origin.y) * direction.y)
-			tneg.append((-box_size.y - origin.y) * direction.y)
+		if (t02 != None and t02 >= 0.0 and abs(r02.z) >= abs(r02.x) and abs(r02.z) >= abs(r02.y) and t02 <= final_t):
+			final_t = t02
+			final = r02
 		
-		if (direction.z != None):
-			tpos.append((box_size.z - origin.z) * direction.z)
-			tneg.append((-box_size.z - origin.z) * direction.z)
+		if (t10 != None and t10 >= 0.0 and abs(r10.x) >= abs(r10.y) and abs(r10.x) >= abs(r10.z) and t10 <= final_t):
+			final_t = t10
+			final = r10
 		
-		# Cannot be touching
-		if (len(tpos) == 0 or len(tneg) == 0):
-			return False
+		if (t11 != None and t11 >= 0.0 and abs(r11.y) >= abs(r11.x) and abs(r11.y) >= abs(r11.z) and t11 <= final_t):
+			final_t = t11
+			final = r11
 		
-		# Get final values
-		fpos = max(tpos)
-		fneg = max(tneg)
+		if (t12 != None and t12 >= 0.0 and abs(r12.z) >= abs(r12.x) and abs(r12.z) >= abs(r12.y) and t12 <= final_t):
+			final_t = t12
+			final = r12
 		
-		# Swap neg/pos values if ray is like that
-		if ((sgn(direction.x) + sgn(direction.y) + sgn(direction.z)) == 0):
-			fpos, fneg = fneg, fpos
-		
-		# If the box intersects, these conditions will hold true (I think? It's unclear to me)
-		return ((fneg <= fpos)
-		   and (fpos + fneg) >= 0.0
-		   and (O_direction * fpos).lengthSquared() <= (max_distance ** 2)
-		   and (O_direction * fneg).lengthSquared() <= (max_distance ** 2)
-		)
+		return (final + self.pos) if final else final
 
 def writeMeshBinary(data, path, seg = None):
 	f = open(path, "wb")
@@ -608,9 +689,14 @@ def writeMeshBinary(data, path, seg = None):
 	vertex_count = 0
 	index_count = 0
 	
+	i = 1
+	l = len(data)
+	
 	# Convert data to bytes
 	for d in data:
 		r = d.asData(vertex_count)
+		
+		print(f"Exported quad {i} of {l} [{(i / l) * 100.0}% done]"); i += 1;
 		
 		vertex += r[0]
 		index += r[1]
