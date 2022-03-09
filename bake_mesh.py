@@ -12,7 +12,7 @@ import uniformpoints
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 9, 0)
+VERSION = (0, 10, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -49,11 +49,12 @@ DISABLE_LIGHT = False
 # Disables per-vertex traced lighting if not already disabled by DISABLE_LIGHT
 # Note: This takes a VERY LONG time to complete and is currently not finished!
 # Enable at your own risk!
-ENABLE_TRACED_LIGHT = True
+ENABLE_TRACED_LIGHT = False
 
-# The maxium distance that an object can be from another object in order to be
+# The max/min distance that an object can be from another object in order to be
 # considered blocking light from getting to it.
-TRACED_LIGHT_DISTANCE = 0.96
+TRACED_LIGHT_MAX_DISTANCE = 0.96
+TRACED_LIGHT_MIN_DISTANCE = -0.001
 
 # Settings for distributing points on a unit hemisphere using the same
 # algotrithm that Smash Hit uses.
@@ -136,6 +137,11 @@ class Vector3:
 	def __format__(self, _unused):
 		return f"{self.x} {self.y} {self.z}"
 	
+	def __eq__(self, other):
+		v = self - other
+		d = 0.001
+		return (-d <= v.x <= d) and (-d <= v.y <= d) and (-d <= v.z <= d)
+	
 	def lengthSquared(self):
 		return self.x * self.x + self.y * self.y + self.z * self.z
 	
@@ -155,26 +161,29 @@ class Vector3:
 	
 	def rotate_to(self, other):
 		"""
-		This implementation only works with axis aligned vectors. This will
-		rotate the current (self) to be as if the other were the up vector
-		(normal).
+		This will rotate the current (self) to be as if the other were the up
+		vector (normal). This is a pretty lazy implementation since we know the
+		six possible inputs and their results. It might be possible to do this
+		by solving for a matrix. It is not possible to do this with the cross
+		product.
 		"""
 		
 		v = self.copy()
-		s = 'This axis shall be swapped with the y axis.'
-		a = 1.0
 		
-		# Find axis to be up
-		for c in ['x', 'y', 'z']:
-			a = getattr(other, c)
-			if (abs(a) > 0.5):
-				s = c
-				break
-		
-		# Swap with y in self, negate s-axis if y is negated
-		tmp_s = getattr(v, s)
-		setattr(v, s, v.y)
-		v.y = a * tmp_s
+		if (other == Vector3(1.0, 0.0, 0.0)):
+			v.x, v.y = v.y, v.x
+		elif (other == Vector3(-1.0, 0.0, 0.0)):
+			v.x, v.y = v.y, -v.x
+		elif (other == Vector3(0.0, 1.0, 0.0)):
+			pass
+		elif (other == Vector3(0.0, -1.0, 0.0)):
+			v.y = -v.y
+		elif (other == Vector3(0.0, 0.0, 1.0)):
+			v.y, v.z = v.z, v.y
+		elif (other == Vector3(0.0, 0.0, -1.0)):
+			v.y, v.z = v.z, -v.y
+		else:
+			print(f"warning: vector {other} not supported for rotate_to")
 		
 		return v
 	
@@ -214,6 +223,22 @@ def parseIntTriplet(string):
 	
 	return (array[0], array[1], array[2])
 
+def parseFloatTriplet(string):
+	"""
+	Parse either a single float or three float in a string to a tuple of three floats
+	"""
+	
+	array = removeEverythingEqualTo(string.split(" "), "")
+	array = [float(array[i]) for i in range(len(array))]
+	
+	if (len(array) < 3):
+		c = len(array) - 1
+		
+		for _ in range(c, 3):
+			array.append(array[c])
+	
+	return (array[0], array[1], array[2])
+
 class SegmentInfo:
 	"""
 	Info about the segment and its global information.
@@ -231,7 +256,7 @@ class SegmentInfo:
 		
 		self.boxes = boxes
 	
-	def raycast(self, origin, direction, max_distance = None):
+	def raycast(self, origin, direction, min_distance = None, max_distance = None):
 		"""
 		Send a raycast into the segment to see if any boxes are hit. Returns the
 		closest hit.
@@ -241,7 +266,7 @@ class SegmentInfo:
 		smallest_length = 1e26
 		
 		for b in self.boxes:
-			result = b.raycast(origin, direction, max_distance)
+			result = b.raycast(origin, direction, min_distance, max_distance)
 			
 			if (result):
 				length = (result - origin).length()
@@ -258,18 +283,16 @@ def doVertexLights(x, y, z, a, gc, normal):
 	
 	light = 0.0
 	
-	# TEST MODE
-	#if (normal.y != 1.0): return a
-	
 	# Check light availibility for vertex
 	for p in UNIT_SPHERE_POINTS:
 		# Check that the rays do not hit
-		origin = Vector3(x, y, z) + normal * 0.02
+		origin = Vector3(x, y, z) + (normal * 0.02)
 		direction = Vector3(p.x, p.y, p.z).rotate_to(normal)
 		
 		# Raycast
-		result = gc.raycast(origin, direction, TRACED_LIGHT_DISTANCE)
+		result = gc.raycast(origin, direction, TRACED_LIGHT_MIN_DISTANCE, TRACED_LIGHT_MAX_DISTANCE)
 		
+		# Add facing ratio to light amount
 		if (result):
 			light += max(direction * normal, 0.0)
 	
@@ -327,7 +350,19 @@ def meshIndexBytes(i0, i1, i2):
 	
 	return c
 
-def getTextureCoords(rows, cols, bite_row, bite_col, tile):
+def rotateList(e, n):
+	"""
+	Rotate n elements of a list e
+	"""
+	
+	n %= len(e)
+	
+	for i in range(n):
+		e.append(e.pop(0))
+	
+	return e
+
+def getTextureCoords(rows, cols, bite_row, bite_col, rot, tile):
 	"""
 	Gets the texture coordinates given the tile number.
 	
@@ -343,20 +378,21 @@ def getTextureCoords(rows, cols, bite_row, bite_col, tile):
 	w = (1 / rows) - (2 * bite_row)
 	h = (1 / cols) - (2 * bite_col)
 	
-	return ((u, v), (u, v + h), (u + w, v + h), (u + w, v))
+	return rotateList([(u, v), (u, v + h), (u + w, v + h), (u + w, v)], rot)
 
 class Quad:
 	"""
 	Representation of a quadrelaterial (a shape with four sides)
 	"""
 	
-	def __init__(self, p1, p2, p3, p4, colour, tile, seg, normal):
+	def __init__(self, p1, p2, p3, p4, colour, tile, tileRot, seg, normal):
 		self.p1 = p1
 		self.p2 = p2
 		self.p3 = p3
 		self.p4 = p4
 		self.colour = colour if not PARTY_MODE else Vector3.random()
 		self.tile = tile
+		self.tileRot = tileRot
 		self.seg = seg
 		self.normal = normal
 	
@@ -372,7 +408,7 @@ class Quad:
 		"""
 		
 		p1, p2, p3, p4, col, gc, normal = self.p1, self.p2, self.p3, self.p4, self.colour, self.seg, self.normal
-		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tile)
+		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tileRot, self.tile)
 		
 		vertexes = b''
 		vertexes += meshPointBytes(p1.x, p1.y, p1.z, tex[0][0], tex[0][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
@@ -394,15 +430,12 @@ class Quad:
 		
 		return (vertexes, indexes, 4, 6)
 
-def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, seg, normal):
+def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, tileRot, seg, normal):
 	"""
 	Generates subdivided quadrelaterials for any given axis where the min/max
 	are not the same. Minest/maxist are the min/max of the quad and ssize and 
 	tsize are the size of the subdivisions. Colour and tile are the colour and
 	tile. The normal is the normal of the surface.
-	
-	TODO: The normal should be used to make tiles face the correct way (that is
-	correct winding order).
 	"""
 	
 	minest = minest.copy()
@@ -492,7 +525,7 @@ def generateSubdividedGeometry(minest, maxest, s_size, t_size, colour, tile, seg
 			p4 = p1                + t_scunitpart
 			
 			# Finally make the quad
-			quads.append(Quad(p1, p2, p3, p4, colour, tile, seg, normal))
+			quads.append(Quad(p1, p2, p3, p4, colour, tile, tileRot, seg, normal))
 			
 			# Add new size to total count (for this major axis)
 			t_current += t_size
@@ -527,7 +560,7 @@ class Box:
 	Very simple container for box data
 	"""
 	
-	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = Vector3(1.0, 1.0, 0.0)):
+	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = (1.0, 1.0, 1.0), tileRot = (0, 0, 0)):
 		"""
 		seg: global segment context
 		pos: position
@@ -535,17 +568,15 @@ class Box:
 		colour: list or tuple of the face colours of the box
 		tile: list or tuple of tiles to use
 		tileSize: size of the box tiles
+		tileRot: rotation of the boxes
 		"""
 		
-		# Expand shorthands
+		# Expand shorthands for vectors
 		if (type(colour) == Vector3):
 			colour = [colour]
 		
 		if (len(colour) == 1):
 			colour = [colour[0], colour[0], colour[0]]
-		
-		if (len(tile) == 1):
-			tile = (tile[0], tile[0], tile[0])
 		
 		# Set attributes
 		self.segment_info = seg
@@ -553,22 +584,21 @@ class Box:
 		self.size = size
 		self.colour = colour
 		self.tile = tile
-		self.tileSize = tileSize # TODO: this is not the same as tileSize in smashhit, fix that
-		
-		if (BAKE_IGNORE_TILESIZE):
-			self.tileSize.x = 1.0
-			self.tileSize.y = 1.0
+		self.tileSize = tileSize
+		self.tileRot = tileRot
 	
 	def bakeGeometry(self):
 		"""
-		Convert the box to the split geometry
+		Convert the box to the split geometry. This is also where a lot of
+		fixes occur, like setting the tile index per face and fixing tile
+		rotation per side.
 		"""
 		
 		# Tip: When reading this section it helps to draw a diagram of what is
 		# happening.
 		
 		# Shorthands
-		pos, tileSize, colour, tile, seg = self.pos, self.tileSize, self.colour, self.tile, self.segment_info
+		pos, tileSize, colour, tile, seg, tileRot = self.pos, self.tileSize, self.colour, self.tile, self.segment_info, self.tileRot
 		
 		# Get the eight points (verticies) of the cube
 		p1 = self.size.partialOpposite(False, False, False)
@@ -582,30 +612,78 @@ class Box:
 		
 		# Compute the quads (note the min/max don't matter so long as its a square)
 		# Only some are baked based on config settings
-		quads  = []
+		quads = []
 		
 		# Right
 		if (BAKE_UNSEEN_FACES or pos.x < 0.0):
-			quads += generateSubdividedGeometry(p1, p3, tileSize.x, tileSize.y, colour[0].withLight(seg.right), tile[0], seg, Vector3(0.0, 0.0, 1.0))
+			quads += generateSubdividedGeometry(
+				p1, p3,
+				tileSize[2], tileSize[2],
+				colour[0].withLight(seg.right),
+				tile[0],
+				tileRot[0],
+				seg,
+				Vector3(1.0, 0.0, 0.0)
+			)
 		
 		# Left
 		if (BAKE_UNSEEN_FACES or pos.x > 0.0):
-			quads += generateSubdividedGeometry(p5, p7, tileSize.x, tileSize.y, colour[0].withLight(seg.left), tile[0], seg, Vector3(0.0, 0.0, -1.0))
+			quads += generateSubdividedGeometry(
+				p5, p7,
+				tileSize[2], tileSize[2],
+				colour[0].withLight(seg.left),
+				tile[0],
+				tileRot[0],
+				seg,
+				Vector3(1.0, 0.0, 0.0)
+			)
 		
 		# Top
 		if (BAKE_UNSEEN_FACES or pos.y < 1.0):
-			quads += generateSubdividedGeometry(p1, p6, tileSize.x, tileSize.y, colour[1].withLight(seg.top), tile[1], seg, Vector3(0.0, 1.0, 0.0))
+			quads += generateSubdividedGeometry(
+				p1, p6,
+				tileSize[1], tileSize[1],
+				colour[1].withLight(seg.top),
+				tile[1],
+				tileRot[1],
+				seg,
+				Vector3(0.0, 1.0, 0.0)
+			)
 		
 		# Bottom
 		if (BAKE_UNSEEN_FACES or pos.y > 1.0):
-			quads += generateSubdividedGeometry(p4, p7, tileSize.x, tileSize.y, colour[1].withLight(seg.bottom), tile[1], seg, Vector3(0.0, -1.0, 0.0))
+			quads += generateSubdividedGeometry(
+				p4, p7,
+				tileSize[1], tileSize[1],
+				colour[1].withLight(seg.bottom),
+				tile[1],
+				tileRot[1],
+				seg,
+				Vector3(0.0, 1.0, 0.0)
+			)
 		
 		# Front
-		quads += generateSubdividedGeometry(p1, p8, tileSize.x, tileSize.y, colour[2].withLight(seg.front), tile[2], seg, Vector3(1.0, 0.0, 0.0))
+		quads += generateSubdividedGeometry(
+			p1, p8,
+			tileSize[0], tileSize[0],
+			colour[2].withLight(seg.front),
+			tile[2],
+			tileRot[2] + 3,
+			seg, 
+			Vector3(0.0, 0.0, 1.0)
+		)
 		
 		# Back
-		if (BAKE_BACK_FACES and BAKE_UNSEEN_FACES):
-			quads += generateSubdividedGeometry(p2, p7, tileSize.x, tileSize.y, colour[2].withLight(seg.back), tile[2], seg, Vector3(-1.0, 0.0, 0.0))
+		if (BAKE_UNSEEN_FACES):
+			quads += generateSubdividedGeometry(
+				p2, p7,
+				tileSize[0], tileSize[0],
+				colour[2].withLight(seg.back),
+				tile[2],
+				tileRot[2] + 3,
+				seg,
+				Vector3(0.0, 0.0, 1.0)
+			)
 		
 		# Translation transform
 		for q in quads:
@@ -616,7 +694,7 @@ class Box:
 		
 		return quads
 	
-	def raycast(self, origin, direction, max_distance = None):
+	def raycast(self, origin, direction, min_distance, max_distance):
 		"""
 		Preform a raycast, only returning true/false. Max distance is in terms
 		of the length of the direction vector.
@@ -653,31 +731,33 @@ class Box:
 		
 		# This could have been done less verbosely, but probably sacrificing performance
 		# and some ease of writing
-		if (t00 != None and t00 >= 0.0 and abs(r00.x) >= abs(r00.y) and abs(r00.x) >= abs(r00.z) and t00 <= final_t):
+		if (t00 != None and t00 >= 0.0 and abs(r00.x) >= abs(r00.y) and abs(r00.x) >= abs(r00.z) and t00 <= final_t and t00 >= min_distance):
 			final_t = t00
 			final = r00
 		
-		if (t01 != None and t01 >= 0.0 and abs(r01.y) >= abs(r01.x) and abs(r01.y) >= abs(r01.z) and t01 <= final_t):
+		if (t01 != None and t01 >= 0.0 and abs(r01.y) >= abs(r01.x) and abs(r01.y) >= abs(r01.z) and t01 <= final_t and t01 >= min_distance):
 			final_t = t01
 			final = r01
 		
-		if (t02 != None and t02 >= 0.0 and abs(r02.z) >= abs(r02.x) and abs(r02.z) >= abs(r02.y) and t02 <= final_t):
+		if (t02 != None and t02 >= 0.0 and abs(r02.z) >= abs(r02.x) and abs(r02.z) >= abs(r02.y) and t02 <= final_t and t02 >= min_distance):
 			final_t = t02
 			final = r02
 		
-		if (t10 != None and t10 >= 0.0 and abs(r10.x) >= abs(r10.y) and abs(r10.x) >= abs(r10.z) and t10 <= final_t):
+		if (t10 != None and t10 >= 0.0 and abs(r10.x) >= abs(r10.y) and abs(r10.x) >= abs(r10.z) and t10 <= final_t and t10 >= min_distance):
 			final_t = t10
 			final = r10
 		
-		if (t11 != None and t11 >= 0.0 and abs(r11.y) >= abs(r11.x) and abs(r11.y) >= abs(r11.z) and t11 <= final_t):
+		if (t11 != None and t11 >= 0.0 and abs(r11.y) >= abs(r11.x) and abs(r11.y) >= abs(r11.z) and t11 <= final_t and t11 >= min_distance):
 			final_t = t11
 			final = r11
 		
-		if (t12 != None and t12 >= 0.0 and abs(r12.z) >= abs(r12.x) and abs(r12.z) >= abs(r12.y) and t12 <= final_t):
+		if (t12 != None and t12 >= 0.0 and abs(r12.z) >= abs(r12.x) and abs(r12.z) >= abs(r12.y) and t12 <= final_t and t12 >= min_distance):
 			final_t = t12
 			final = r12
 		
-		return (final + self.pos) if final else final
+		final = (final + self.pos) if final else final
+		
+		return final
 
 def writeMeshBinary(data, path, seg = None):
 	f = open(path, "wb")
@@ -696,7 +776,7 @@ def writeMeshBinary(data, path, seg = None):
 	for d in data:
 		r = d.asData(vertex_count)
 		
-		print(f"Exported quad {i} of {l} [{(i / l) * 100.0}% done]"); i += 1;
+		# print(f"Exported quad {i} of {l} [{(i / l) * 100.0}% done]"); i += 1;
 		
 		vertex += r[0]
 		index += r[1]
@@ -746,13 +826,26 @@ def parseXml(data, templates = {}):
 			
 			if (getFromTemplate(a, templates, t, "visible", "1") != "0"):
 				# Get properties
-				pos = Vector3.fromString(getFromTemplate(a, templates, t, "pos", "0 0 0"))
-				size = Vector3.fromString(getFromTemplate(a, templates, t, "size", "0.5 0.5 0.5"))
-				colour = Vector3.fromString(getFromTemplate(a, templates, t, "color", "1 1 1"), True)
-				tile = parseIntTriplet(getFromTemplate(a, templates, t, "tile", "0"))
-				tileSize = Vector3.fromString(getFromTemplate(a, templates, t, "tileSize", "1 1"))
 				
-				boxes.append(Box(seg, pos, size, colour, tile, tileSize))
+				# Position -- x y z
+				pos = Vector3.fromString(getFromTemplate(a, templates, t, "pos", "0 0 0"))
+				
+				# Size -- x y z
+				size = Vector3.fromString(getFromTemplate(a, templates, t, "size", "0.5 0.5 0.5"))
+				
+				# Colour -- r1 g1 b1   [r2 g2 b2   r3 g3 b3]
+				colour = Vector3.fromString(getFromTemplate(a, templates, t, "color", "1 1 1"), True)
+				
+				# Tile -- tile1 [tile2 tile3]
+				tile = parseIntTriplet(getFromTemplate(a, templates, t, "tile", "0"))
+				
+				# Tile size -- size1 [size2 size3]
+				tileSize = parseFloatTriplet(getFromTemplate(a, templates, t, "tileSize", "1"))
+				
+				# Tile rotation -- rot1 [rot2 rot3]
+				tileRot = parseIntTriplet(getFromTemplate(a, templates, t, "tileRot", "1"))
+				
+				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot))
 	
 	return boxes
 

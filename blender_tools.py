@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 14),
+	"version": (1, 99, 15),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -180,9 +180,9 @@ def sh_add_object(level_root, scene, obj, params):
 	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 		properties["tile"] = str(obj.sh_properties.sh_tile)
-		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1])
+		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
 		if (obj.sh_properties.sh_tilerot[1] > 0.0 or obj.sh_properties.sh_tilerot[2] > 0.0 or obj.sh_properties.sh_tilerot[0] > 0.0):
-			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2]) + " " + str(obj.sh_properties.sh_tilerot[0])
+			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[0]) + " " + str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2])
 	
 	# Set the tag name
 	element_type = "entity"
@@ -946,21 +946,21 @@ class sh_EntityProperties(PropertyGroup):
 		max = 63
 		)
 	
-	sh_tilerot: FloatVectorProperty(
-		name = "Tile rotation",
-		description = "Rotation of the tile, in radians (Pi = 1/2 rotation)",
-		default = (0.0, 0.0, 0.0), 
-		min = -6.28318530718,
-		max = 6.28318530718
+	sh_tilerot: IntVectorProperty(
+		name = "Orientation",
+		description = "Orientation of the tile, where 0 is facing up",
+		default = (0, 0, 0), 
+		min = 0,
+		max = 3,
 	) 
 	
 	sh_tilesize: FloatVectorProperty(
-		name = "Tile size",
-		description = "The appearing size of the tiles on the box when exported",
-		default = (1.0, 1.0), 
+		name = "Size",
+		description = "The appearing size of the tiles on the box when exported. In RightLeft, TopBottom, FrontBack",
+		default = (1.0, 1.0, 1.0), 
 		min = 0.0,
 		max = 128.0,
-		size = 2
+		size = 3
 	) 
 	
 	########################
