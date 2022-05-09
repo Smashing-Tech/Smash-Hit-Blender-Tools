@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 15),
+	"version": (1, 99, 16),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -90,12 +90,15 @@ def sh_add_object(level_root, scene, obj, params):
 		"pos": str(position["X"]) + " " + str(position["Y"]) + " " + str(position["Z"]),
 	}
 	
+	# Shorthand for obj.sh_properties.sh_type
+	sh_type = obj.sh_properties.sh_type
+	
 	# Type for obstacles
-	if (obj.sh_properties.sh_type == "OBS"):
+	if (sh_type == "OBS"):
 		properties["type"] = obj.sh_properties.sh_obstacle_chooser if obj.sh_properties.sh_use_chooser else obj.sh_properties.sh_obstacle
 	
 	# Type for power-ups
-	if (obj.sh_properties.sh_type == "POW"):
+	if (sh_type == "POW"):
 		properties["type"] = obj.sh_properties.sh_powerup
 		
 	# Hidden for all types
@@ -105,7 +108,7 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["hidden"] = "0"
 	
 	# Add size for boxes
-	if (obj.sh_properties.sh_type == "BOX"):
+	if (sh_type == "BOX"):
 		# Again, swapped becuase of Smash Hit's demensions
 		size = {"X": obj.dimensions[1] / 2, "Y": obj.dimensions[2] / 2, "Z": obj.dimensions[0] / 2}
 		
@@ -116,7 +119,7 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["size"] = str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	
 	# Add rotation paramater if any rotation has been done and this is a box
-	if (obj.sh_properties.sh_type == "OBS" or obj.sh_properties.sh_type == "DEC"):
+	if (sh_type == "OBS" or sh_type == "DEC"):
 		if (obj.rotation_euler[1] > 0.0 or obj.rotation_euler[2] > 0.0 or obj.rotation_euler[0] > 0.0):
 			properties["rot"] = str(obj.rotation_euler[1]) + " " + str(obj.rotation_euler[2]) + " " + str(obj.rotation_euler[0])
 	
@@ -125,7 +128,7 @@ def sh_add_object(level_root, scene, obj, params):
 		properties["template"] = obj.sh_properties.sh_template
 	
 	# Add mode appearance tag
-	if (obj.sh_properties.sh_type == "OBS"):
+	if (sh_type == "OBS"):
 		mask = 0b0
 		
 		for v in [("training", 1), ("classic", 2), ("expert", 4), ("zen", 8), ("versus", 16), ("coop", 32)]:
@@ -136,25 +139,25 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["mode"] = str(mask)
 	
 	# Add reflection property for boxes if not default
-	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_reflective):
+	if (sh_type == "BOX" and obj.sh_properties.sh_reflective):
 		properties["reflection"] = "1"
 	
 	# Add decal number if this is a decal
-	if (obj.sh_properties.sh_type == "DEC"):
+	if (sh_type == "DEC"):
 		properties["tile"] = str(obj.sh_properties.sh_decal)
 	
 	# Add decal size if this is a decal (based on sh_size)
-	if (obj.sh_properties.sh_type == "DEC"):
+	if (sh_type == "DEC"):
 		properties["size"] = str(obj.sh_properties.sh_size[0]) + " " + str(obj.sh_properties.sh_size[1])
 	
 	# Add water size if this is a water (based on physical plane properties)
-	if (obj.sh_properties.sh_type == "WAT"):
+	if (sh_type == "WAT"):
 		size = {"X": obj.dimensions[1] / 2, "Z": obj.dimensions[0] / 2}
 		
 		properties["size"] = str(size["X"]) + " " + str(size["Z"])
 	
 	# Set each of the tweleve paramaters if they are needed.
-	if (obj.sh_properties.sh_type == "OBS"):
+	if (sh_type == "OBS"):
 		for i in range(12):
 			val = getattr(obj.sh_properties, "sh_param" + str(i))
 			
@@ -162,14 +165,19 @@ def sh_add_object(level_root, scene, obj, params):
 				properties["param" + str(i)] = val
 	
 	# Set tint for decals
-	if (obj.sh_properties.sh_type == "DEC" and obj.sh_properties.sh_havetint):
+	if (sh_type == "DEC" and obj.sh_properties.sh_havetint):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 	
+	# Fake lights
+	if (sh_type == "LIG"):
+		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
+		properties["type"] = obj.sh_properties.sh_lighttype
+	
 	# Set blend for decals
-	if (obj.sh_properties.sh_type == "DEC" and obj.sh_properties.sh_blend != 1.0):
+	if (sh_type == "DEC" and obj.sh_properties.sh_blend != 1.0):
 		properties["blend"] = str(obj.sh_properties.sh_blend)
 	
-	if (obj.sh_properties.sh_type == "BOX"):
+	if (sh_type == "BOX"):
 		if (obj.sh_properties.sh_visible):
 			properties["visible"] = "1"
 		else:
@@ -177,7 +185,7 @@ def sh_add_object(level_root, scene, obj, params):
 				properties["visible"] = "0"
 	
 	# Set tile info for boxes if visible and there is no template specified
-	if (obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
+	if (sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 		properties["tile"] = str(obj.sh_properties.sh_tile)
 		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
@@ -187,16 +195,18 @@ def sh_add_object(level_root, scene, obj, params):
 	# Set the tag name
 	element_type = "entity"
 	
-	if (obj.sh_properties.sh_type == "BOX"):
+	if (sh_type == "BOX"):
 		element_type = "box"
-	elif (obj.sh_properties.sh_type == "OBS"):
+	elif (sh_type == "OBS"):
 		element_type = "obstacle"
-	elif (obj.sh_properties.sh_type == "DEC"):
+	elif (sh_type == "DEC"):
 		element_type = "decal"
-	elif (obj.sh_properties.sh_type == "POW"):
+	elif (sh_type == "POW"):
 		element_type = "powerup"
-	elif (obj.sh_properties.sh_type == "WAT"):
+	elif (sh_type == "WAT"):
 		element_type = "water"
+	elif (sh_type == "LIG"):
+		element_type = "light"
 	
 	# Add the element to the document
 	el = et.SubElement(level_root, element_type, properties)
@@ -204,7 +214,7 @@ def sh_add_object(level_root, scene, obj, params):
 	if (params["isLast"]): # Fixes the issues with the last line of the file
 		el.tail = "\n"
 	
-	if (params["sh_exportmode"] == "StoneHack" and obj.sh_properties.sh_type == "BOX" and obj.sh_properties.sh_visible):
+	if (params["sh_box_bake_mode"] == "StoneHack" and sh_type == "BOX" and obj.sh_properties.sh_visible):
 		"""
 		Export a fake obstacle that will represent stone in the level.
 		"""
@@ -233,6 +243,7 @@ def sh_add_object(level_root, scene, obj, params):
 		if (obj.sh_properties.sh_template):
 			properties["template"] = obj.sh_properties.sh_template
 		else:
+			properties["param7"] = "tile=" + str(obj.sh_properties.sh_decal)
 			properties["param8"] = "color=" + str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2])
 		
 		el_stone = et.SubElement(level_root, "obstacle", properties)
@@ -240,7 +251,7 @@ def sh_add_object(level_root, scene, obj, params):
 		if (params["isLast"]):
 			el_stone.tail = "\n"
 
-def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_exportmode": "Mesh"}):
+def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
 	"""
@@ -265,11 +276,11 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		
 		sh_add_object(level_root, scene, obj, params)
 	
-	# Write the file
+	##
+	## Write the file
+	##
 	
-	file_header = "<!-- Exported with Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
-	if (params["sh_noheader"]):
-		file_header = ""
+	file_header = "<!-- Exporter: Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
 	content = file_header + et.tostring(level_root, encoding = "unicode")
 	
 	# Cook the mesh if we need to
@@ -278,21 +289,16 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		meshfile = ospath.splitext(meshfile)[0]
 	meshfile += ".mesh.mp3"
 	
-	try:
-		if (params["sh_exportmode"] == "Mesh"):
-			bake_mesh.TILE_COLS = params["bake_tile_texture_count"][0]
-			bake_mesh.TILE_ROWS = params["bake_tile_texture_count"][1]
-			bake_mesh.TILE_BITE_COL = params["bake_tile_texture_cutoff"][0]
-			bake_mesh.TILE_BITE_ROW = params["bake_tile_texture_cutoff"][1]
-			bake_mesh.BAKE_BACK_FACES = params.get("bake_back_faces", False)
-			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
-			bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
-			bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
-			bake_mesh.DISABLE_LIGHT = params.get("disable_lighting", False)
-			bake_mesh.ENABLE_TRACED_LIGHT = params.get("bake_raycast", False)
-			bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
-	except FileNotFoundError:
-		print("Warning: Bake mesh had a FileNotFoundError.")
+	if (params["sh_box_bake_mode"] == "Mesh"):
+		bake_mesh.TILE_COLS = params["bake_tile_texture_count"][0]
+		bake_mesh.TILE_ROWS = params["bake_tile_texture_count"][1]
+		bake_mesh.TILE_BITE_COL = params["bake_tile_texture_cutoff"][0]
+		bake_mesh.TILE_BITE_ROW = params["bake_tile_texture_cutoff"][1]
+		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
+		bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
+		bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
+		bake_mesh.ENABLE_VERTEX_LIGHT = params.get("bake_vertex_light", False)
+		bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	
 	# Write out file
 	if (not compress):
@@ -305,45 +311,21 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 	context.window.cursor_set('DEFAULT')
 	return {"FINISHED"}
 
-def sh_load_templates(infile):
-	"""
-	Load templates from a file
-	"""
-	
-	result = {}
-	
-	if (not infile):
-		return result
-	
-	tree = et.parse(infile)
-	root = tree.getroot()
-	
-	assert("templates" == root.tag)
-	
-	for child in root:
-		assert("template" == child.tag)
-		
-		name = child.attrib["name"]
-		attribs = child[0].attrib
-		
-		result[name] = attribs
-	
-	return result
-
 ## UI-related classes
 
 class ExportHelper2:
 	filepath: StringProperty(
-		name="File Path",
-		description="Filepath used for exporting the file",
-		maxlen=1024,
-		subtype='FILE_PATH',
+		name = "File Path",
+		description = "Filepath used for exporting the file",
+		maxlen = 1024,
+		subtype = 'FILE_PATH',
 	)
+	
 	check_existing: BoolProperty(
-		name="Check Existing",
-		description="Check and warn on overwriting existing files",
-		default=True,
-		options={'HIDDEN'},
+		name = "Check Existing",
+		description = "Check and warn on overwriting existing files",
+		default = True,
+		options = {'HIDDEN'},
 	)
 	
 	# subclasses can override with decorator
@@ -423,18 +405,18 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	
 	sh_vrmultiply: FloatProperty(
 		name = "Segment strech",
-		description = "This option tries to strech the segment's depth. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment. If you are serious about Smash Hit VR, avoid this setting, otherwise this can be a nice way to support VR without doing any extra work.",
+		description = "This option tries to strech the segment's depth to make more time between obstacles. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment",
 		default = 1.0,
-		min = 1.0,
+		min = 0.75,
 		max = 4.0,
 		)
 	
-	sh_exportmode: EnumProperty(
-		name = "Box baking",
+	sh_box_bake_mode: EnumProperty(
+		name = "Box bake mode",
 		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
 		items = [ 
 			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
-			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported; there are no textures"),
+			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
@@ -442,21 +424,15 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	
 	sh_meshbake_template: StringProperty(
 		name = "Template",
-		description = "A relitive or full path to a template file. This is used for baking meshes. If you use APK Editor Studio, the path to the file will be pre-filled on opening the dialogue",
+		description = "(Mesh mode only) A relitive or full path to the template file used for baking meshes. If you use APK Editor Studio on Windows or Linux and the Smash Hit APK is open, the path to the file will be pre-filled",
 		default = "",
 		subtype = "FILE_PATH",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
-	sh_disableheader: BoolProperty(
-		name = "Disable header comment",
-		description = "Disables the message that shows the segment was export with blender tools",
-		default = False
-		)
-	
 	bake_tile_texture_count: IntVectorProperty(
-		name = "Tile texture count",
-		description = "For mesh bake only: The number of tiles in tiles.png.mtx in (columns, rows) format",
+		name = "Tile count",
+		description = "(Mesh mode only) The number of tiles in tiles.png.mtx in (columns, rows) format",
 		size = 2,
 		default = (8, 8),
 		min = 1,
@@ -464,41 +440,35 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 		)
 	
 	bake_tile_texture_cutoff: FloatVectorProperty(
-		name = "Tile texture cutoff",
-		description = "For mesh bake only: The region around the tile texture that will be cut off",
+		name = "Tile crop",
+		description = "(Mesh mode only) The region around the tile texture that will be cut off",
 		size = 2,
 		default = (0.03125, 0.03125),
 		min = 0.0,
 		max = 0.0625,
 		)
 	
-	no_lighting: BoolProperty(
-		name = "Disable lighting (deprecated)",
-		description = "For bake mesh only: Disables vertex per-face vertex lighting (do not use anymore)",
-		default = False
-		)
-	
 	bake_unseen_faces: BoolProperty(
 		name = "Bake unseen faces",
-		description = "For bake mesh only: Bakes faces that cannot be seen by the player. This is only needed for main menu segments where these faces can actually be seen",
+		description = "(Mesh mode only) Bakes faces that cannot be seen by the player. This is only needed for main menu segments where these faces can actually be seen",
 		default = False
 		)
 	
 	bake_ignore_tilesize: BoolProperty(
-		name = "Ignore tileSize parameter",
-		description = "For bake mesh only: Ignores the non-faithful interpretation of the tileSize argument in MeshBake and only allows for tileSize to have one or three numbers",
+		name = "Ignore tile size",
+		description = "(Mesh mode only) Ignores the non-faithful interpretation of the tileSize argument in MeshBake and only allows for tileSize to have one or three numbers",
 		default = False
 		)
 	
-	bake_raycast: BoolProperty(
-		name = "Enable traced lighting (exprimental)",
-		description = "Enables per-vertex traced lighting if not already disabled by DISABLE_LIGHT. Note: This takes a VERY LONG time to complete and is currently not finished! Enable at your own risk! ..",
-		default = False
+	bake_vertex_light: BoolProperty(
+		name = "Per-vertex lighting",
+		description = "(Mesh mode only) Enables per-vertex lighting",
+		default = True
 		)
 	
 	bake_partymode: BoolProperty(
-		name = "Party mode (for debugging)",
-		description = "Randomises quad colours for debugging",
+		name = "Party mode",
+		description = "(Mesh mode only) Try it :o)",
 		default = False
 		)
 
@@ -518,16 +488,14 @@ class sh_export(sh_ExportCommon):
 			context,
 			params = {
 				"sh_vrmultiply": self.sh_vrmultiply,
-				"sh_exportmode": self.sh_exportmode,
-				"disable_lighting": self.no_lighting,
+				"sh_box_bake_mode": self.sh_box_bake_mode,
 				"sh_meshbake_template": self.sh_meshbake_template,
-				"sh_noheader": self.sh_disableheader,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
 				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
-				"bake_raycast": self.bake_raycast,
+				"bake_vertex_light": self.bake_vertex_light,
 				"bake_partymode": self.bake_partymode,
 			}
 		)
@@ -553,16 +521,14 @@ class sh_export_gz(sh_ExportCommon):
 			compress = True, 
 			params = {
 				"sh_vrmultiply": self.sh_vrmultiply,
-				"sh_exportmode": self.sh_exportmode,
-				"disable_lighting": self.no_lighting,
+				"sh_box_bake_mode": self.sh_box_bake_mode,
 				"sh_meshbake_template": self.sh_meshbake_template,
-				"sh_noheader": self.sh_disableheader,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
 				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_back_faces": self.bake_unseen_faces,
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
-				"bake_raycast": self.bake_raycast,
+				"bake_vertex_light": self.bake_vertex_light,
 				"bake_partymode": self.bake_partymode,
 			}
 		)
@@ -849,6 +815,7 @@ class sh_EntityProperties(PropertyGroup):
 				  ('DEC', "Decal", ""),
 				  ('POW', "Power-up", ""),
 				  ('WAT', "Water", ""),
+				  ('LIG', "Light", "WARNING: This is an unofficial extension which as not been fully developed"),
 				],
 		default = "BOX"
 		)
@@ -1105,6 +1072,15 @@ class sh_EntityProperties(PropertyGroup):
 		max = 256.0,
 		size = 2,
 	)
+	
+	sh_lighttype: EnumProperty(
+		name = "Type",
+		description = "Light type",
+		items = [
+			('point', "Point", "Point light"),
+		],
+		default = "point",
+		)
 
 class sh_SegmentPanel(Panel):
 	bl_label = "Segment Properties"
@@ -1195,6 +1171,11 @@ class sh_ObstaclePanel(Panel):
 		# Size for decals
 		if (sh_properties.sh_type == "DEC"):
 			layout.prop(sh_properties, "sh_size")
+		
+		# Fake lights
+		if (sh_properties.sh_type == "LIG"):
+			layout.prop(sh_properties, "sh_tint")
+			layout.prop(sh_properties, "sh_lighttype")
 		
 		# Hidden property
 		if (sh_properties.sh_type != "BOX"):

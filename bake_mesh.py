@@ -12,7 +12,7 @@ import uniformpoints
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 10, 0)
+VERSION = (0, 11, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -31,7 +31,6 @@ TILE_BITE_COL = 0.03125
 
 # Disable or enable baking unseen and back faces. Note that unseen faces does
 # includes back faces, so both must be enabled for those.
-BAKE_BACK_FACES = False
 BAKE_UNSEEN_FACES = False
 
 # Ignore the tileSize attribute, defaulting to the single unit tile, which can
@@ -49,23 +48,26 @@ DISABLE_LIGHT = False
 # Disables per-vertex traced lighting if not already disabled by DISABLE_LIGHT
 # Note: This takes a VERY LONG time to complete and is currently not finished!
 # Enable at your own risk!
-ENABLE_TRACED_LIGHT = False
+ENABLE_VERTEX_LIGHT = True
 
 # The max/min distance that an object can be from another object in order to be
 # considered blocking light from getting to it.
-TRACED_LIGHT_MAX_DISTANCE = 0.96
-TRACED_LIGHT_MIN_DISTANCE = -0.001
+# TRACED_LIGHT_MAX_DISTANCE = 0.95
 
 # Settings for distributing points on a unit hemisphere using the same
 # algotrithm that Smash Hit uses.
-TRACED_LIGHT_ITERATIONS = 1000
-TRACED_LIGHT_POINTS = 64
+# TRACED_LIGHT_ITERATIONS = 1000
+# TRACED_LIGHT_POINTS = 64
+
+# Half of the size of the delta box when using the delta-box lighting method
+BOXED_LIGHT_DELTA = 0.04
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
 ################################################################################
 
-UNIT_SPHERE_POINTS = uniformpoints.distributePointsOnUnitHemisphere(TRACED_LIGHT_ITERATIONS, TRACED_LIGHT_POINTS)
+# UNIT_HEMISPHERE_POINTS = uniformpoints.distributePointsOnUnitHemisphere(TRACED_LIGHT_ITERATIONS, TRACED_LIGHT_POINTS)
+# TRACED_LIGHT_POINTS_INV = 1 / TRACED_LIGHT_POINTS
 
 def removeEverythingEqualTo(array, value):
 	"""
@@ -134,10 +136,14 @@ class Vector3:
 		else:
 			return Vector3(other * self.x, other * self.y, other * self.z)
 	
+	def __truediv__(self, other):
+		return Vector3(self.x / other.x, self.y / other.y, self.z / other.z)
+	
 	def __format__(self, _unused):
 		return f"{self.x} {self.y} {self.z}"
 	
 	def __eq__(self, other):
+		if (type(self) != type(other)): return False
 		v = self - other
 		d = 0.001
 		return (-d <= v.x <= d) and (-d <= v.y <= d) and (-d <= v.z <= d)
@@ -256,60 +262,67 @@ class SegmentInfo:
 		
 		self.boxes = boxes
 	
-	def raycast(self, origin, direction, min_distance = None, max_distance = None):
+	def boxcast(self, pos, size):
 		"""
-		Send a raycast into the segment to see if any boxes are hit. Returns the
-		closest hit.
+		Check for the largest collision (by volume) of a box in a scene in a
+		tuple with (accum volume, number intersected)
 		"""
 		
-		smallest = False
-		smallest_length = 1e26
+		total = 0.0
+		intersected = 0
 		
 		for b in self.boxes:
-			result = b.raycast(origin, direction, min_distance, max_distance)
+			result = b.testAABB(pos, size)
 			
 			if (result):
-				length = (result - origin).length()
-				if (length < smallest_length):
-					smallest = result
-					smallest_length = length
+				volume = (2.0 * result[1].x) * (2.0 * result[1].y) * (2.0 * result[1].z)
+				
+				# print(f"\t Box: {result[0]} {result[1]} {volume}")
+				
+				intersected += 1
+				total += volume
 		
-		return smallest
+		return (total, intersected)
 
 def doVertexLights(x, y, z, a, gc, normal):
 	"""
 	Compute the light at a vertex
+	
+	The following method is an idea that I had to get percise light information
+	about a point very quickly when a scene has only AABBs. Basically, we pick
+	a vertex then create a cube of a certian length, width and height around
+	that vertex. We then find every intersection with that box and sum the
+	volume of the union of those intersections. After this, we take the ratio
+	between the volume of half the delta box and the accumulated volume. With
+	this, we subtract half of the delta box volume from our accumulated volume,
+	max it with 0, divide that by half of the delta box volume and finally cube
+	root it which should give us an apprimation of the light that reaches this
+	point without preforming many many raycasts.
+	
+	This has some issues: overlaping boxes can cause the algorithm to overshade
+	some point dramatically.
 	"""
 	
-	light = 0.0
+	# Find the size and half of the volume of the delta box
+	delta_box_size = Vector3(BOXED_LIGHT_DELTA, BOXED_LIGHT_DELTA, BOXED_LIGHT_DELTA)
+	delta_box_volume = ((2.0 * BOXED_LIGHT_DELTA) ** 3)
 	
-	# Check light availibility for vertex
-	for p in UNIT_SPHERE_POINTS:
-		# Check that the rays do not hit
-		origin = Vector3(x, y, z) + (normal * 0.02)
-		direction = Vector3(p.x, p.y, p.z).rotate_to(normal)
-		
-		# Raycast
-		result = gc.raycast(origin, direction, TRACED_LIGHT_MIN_DISTANCE, TRACED_LIGHT_MAX_DISTANCE)
-		
-		# Add facing ratio to light amount
-		if (result):
-			light += max(direction * normal, 0.0)
+	# Find the box with largest volume intresecting the box around this vertex
+	accum, isect = gc.boxcast(Vector3(x, y, z), delta_box_size)
 	
-	# Divide by light points
-	light *= (1 / TRACED_LIGHT_POINTS)
+	# Find the light based on the volume taken
+	shade = ((max(accum - (0.5 * delta_box_volume), 0)) / (0.5 * delta_box_volume))
 	
-	# Return the final light value
-	light = a * (1.0 - (light))
+	# print(f"{x} {y} {z}  accum {accum}   count {isect}   shade {shade}")
 	
-	return light
+	return a * (1.0 - 0.38 * shade ** 0.2)
 
 def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
 	Do any final colour correction operations and per-vertex lighting.
 	"""
 	
-	if (ENABLE_TRACED_LIGHT):
+	if (ENABLE_VERTEX_LIGHT):
 		a = doVertexLights(x, y, z, a, gc, normal)
 	
 	return r * 0.5, g * 0.5, b * 0.5, a if not DISABLE_LIGHT else 1.0
@@ -635,7 +648,7 @@ class Box:
 				tile[0],
 				tileRot[0],
 				seg,
-				Vector3(1.0, 0.0, 0.0)
+				Vector3(-1.0, 0.0, 0.0)
 			)
 		
 		# Top
@@ -659,7 +672,7 @@ class Box:
 				tile[1],
 				tileRot[1],
 				seg,
-				Vector3(0.0, 1.0, 0.0)
+				Vector3(0.0, -1.0, 0.0)
 			)
 		
 		# Front
@@ -682,7 +695,7 @@ class Box:
 				tile[2],
 				tileRot[2] + 3,
 				seg,
-				Vector3(0.0, 0.0, 1.0)
+				Vector3(0.0, 0.0, -1.0)
 			)
 		
 		# Translation transform
@@ -694,70 +707,39 @@ class Box:
 		
 		return quads
 	
-	def raycast(self, origin, direction, min_distance, max_distance):
+	def testAABB(self, other_pos, other_size):
 		"""
-		Preform a raycast, only returning true/false. Max distance is in terms
-		of the length of the direction vector.
-		
-		Note: It's easier to dirive this from the equation of a box:
-			max(|x|, |y|, |z|) = r
-		
-		Unlike most ray and aabb tests this directly uses the fact that the |c|
-		must be greater than the absolute value of other components at that
-		point.
+		Intersect self with another AABB and return origin and size of the
+		formed aabb
 		"""
 		
-		origin = origin - self.pos
+		def test_aabb_axis(a_min, a_max, b_min, b_max):
+			"""
+			Test a single aabb axis returning the midpoint and half-difference of two values
+			"""
+			
+			if (a_min > a_max):
+				a_min, a_max = a_max, a_min
+			
+			if (b_min > b_max):
+				b_min, b_max = b_max, b_min
+			
+			if (a_max >= b_min and b_max >= a_min):
+				return (0.5 * (b_max + a_min), 0.5 * (min(a_max, b_max) - max(a_min, b_min)))
+			else:
+				return None
 		
-		# Find intersection points
-		t00 = dnz((self.size.x - origin.x), direction.x)
-		t01 = dnz((self.size.y - origin.y), direction.y)
-		t02 = dnz((self.size.z - origin.z), direction.z)
-		t10 = dnz((-self.size.x - origin.x), direction.x)
-		t11 = dnz((-self.size.y - origin.y), direction.y)
-		t12 = dnz((-self.size.z - origin.z), direction.z)
+		########################################################################
 		
-		# Evaluate rays at points
-		r00 = (origin + (direction * t00)) if t00 != None else None
-		r01 = (origin + (direction * t01)) if t01 != None else None
-		r02 = (origin + (direction * t02)) if t02 != None else None
-		r10 = (origin + (direction * t10)) if t10 != None else None
-		r11 = (origin + (direction * t11)) if t11 != None else None
-		r12 = (origin + (direction * t12)) if t12 != None else None
+		x = test_aabb_axis(self.pos.x - self.size.x, self.pos.x + self.size.x, other_pos.x - other_size.x, other_pos.x + other_size.x)
+		y = test_aabb_axis(self.pos.y - self.size.y, self.pos.y + self.size.y, other_pos.y - other_size.y, other_pos.y + other_size.y)
+		z = test_aabb_axis(self.pos.z - self.size.z, self.pos.z + self.size.z, other_pos.z - other_size.z, other_pos.z + other_size.z)
 		
-		# Find the final solutions
-		final = False
-		final_t = max_distance
+		if (x != None and y != None and z != None):
+			#       Origin                     Size
+			return (Vector3(x[0], y[0], z[0]), Vector3(x[1], y[1], z[1]))
 		
-		# This could have been done less verbosely, but probably sacrificing performance
-		# and some ease of writing
-		if (t00 != None and t00 >= 0.0 and abs(r00.x) >= abs(r00.y) and abs(r00.x) >= abs(r00.z) and t00 <= final_t and t00 >= min_distance):
-			final_t = t00
-			final = r00
-		
-		if (t01 != None and t01 >= 0.0 and abs(r01.y) >= abs(r01.x) and abs(r01.y) >= abs(r01.z) and t01 <= final_t and t01 >= min_distance):
-			final_t = t01
-			final = r01
-		
-		if (t02 != None and t02 >= 0.0 and abs(r02.z) >= abs(r02.x) and abs(r02.z) >= abs(r02.y) and t02 <= final_t and t02 >= min_distance):
-			final_t = t02
-			final = r02
-		
-		if (t10 != None and t10 >= 0.0 and abs(r10.x) >= abs(r10.y) and abs(r10.x) >= abs(r10.z) and t10 <= final_t and t10 >= min_distance):
-			final_t = t10
-			final = r10
-		
-		if (t11 != None and t11 >= 0.0 and abs(r11.y) >= abs(r11.x) and abs(r11.y) >= abs(r11.z) and t11 <= final_t and t11 >= min_distance):
-			final_t = t11
-			final = r11
-		
-		if (t12 != None and t12 >= 0.0 and abs(r12.z) >= abs(r12.x) and abs(r12.z) >= abs(r12.y) and t12 <= final_t and t12 >= min_distance):
-			final_t = t12
-			final = r12
-		
-		final = (final + self.pos) if final else final
-		
-		return final
+		return None
 
 def writeMeshBinary(data, path, seg = None):
 	f = open(path, "wb")
@@ -847,7 +829,7 @@ def parseXml(data, templates = {}):
 				
 				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot))
 	
-	return boxes
+	return seg
 
 def parseTemplatesXml(path):
 	"""
@@ -877,7 +859,7 @@ def bakeMesh(data, path, templates_path = None):
 	Bake a mesh from Smash Hit segment data
 	"""
 	
-	boxes = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
+	boxes = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {}).boxes
 	
 	meshData = []
 	
@@ -886,12 +868,28 @@ def bakeMesh(data, path, templates_path = None):
 	
 	writeMeshBinary(meshData, path, boxes[0].segment_info)
 
-def main(input_file, output_file, template_file = None):
-	f = open(input_file, "r")
-	content = f.read()
+def raytrace(path, templates_path = None):
+	"""
+	Simple raytrace scene to stdout as PPM P3
+	"""
+	
+	f = open(path, "r")
+	data = f.read()
 	f.close()
 	
-	bakeMesh(content, output_file, template_file)
+	seg = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
+	seg.raytrace()
+
+def main(input_file, output_file, template_file = None):
+	f = open(input_file, "r")
+	data = f.read()
+	f.close()
+	
+	bakeMesh(data, output_file, template_file)
 
 if (__name__ == "__main__"):
+	if (sys.argv[1] == "/raytrace"):
+		raytrace(sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)
+		sys.exit(0)
+	
 	main(sys.argv[1], sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)
