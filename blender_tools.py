@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 16),
+	"version": (1, 99, 17),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -120,7 +120,7 @@ def sh_add_object(level_root, scene, obj, params):
 	
 	# Add rotation paramater if any rotation has been done and this is a box
 	if (sh_type == "OBS" or sh_type == "DEC"):
-		if (obj.rotation_euler[1] > 0.0 or obj.rotation_euler[2] > 0.0 or obj.rotation_euler[0] > 0.0):
+		if (obj.rotation_euler[1] != 0.0 or obj.rotation_euler[2] != 0.0 or obj.rotation_euler[0] != 0.0):
 			properties["rot"] = str(obj.rotation_euler[1]) + " " + str(obj.rotation_euler[2]) + " " + str(obj.rotation_euler[0])
 	
 	# Add template for all types of objects
@@ -297,7 +297,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
 		bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
 		bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
-		bake_mesh.ENABLE_VERTEX_LIGHT = params.get("bake_vertex_light", False)
+		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", False)
 		bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	
 	# Write out file
@@ -835,14 +835,14 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_obstacle: StringProperty(
 		name = "Obstacle",
-		description = "Type of obstacle to be used as a file name string",
+		description = "Type of obstacle to be used (as a file name string)",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_obstacle_chooser: EnumProperty(
 		name = "Obstacle",
-		description = "Type of obstacle to be used",
+		description = "Type of obstacle to be used (pick a name)",
 		items = obstacle_db.OBSTACLES,
 		default = "scoretop",
 		)

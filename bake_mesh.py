@@ -8,11 +8,10 @@ import zlib
 import sys
 import xml.etree.ElementTree as et
 import random
-import uniformpoints
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 11, 0)
+VERSION = (0, 12, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -48,19 +47,10 @@ DISABLE_LIGHT = False
 # Disables per-vertex traced lighting if not already disabled by DISABLE_LIGHT
 # Note: This takes a VERY LONG time to complete and is currently not finished!
 # Enable at your own risk!
-ENABLE_VERTEX_LIGHT = True
-
-# The max/min distance that an object can be from another object in order to be
-# considered blocking light from getting to it.
-# TRACED_LIGHT_MAX_DISTANCE = 0.95
-
-# Settings for distributing points on a unit hemisphere using the same
-# algotrithm that Smash Hit uses.
-# TRACED_LIGHT_ITERATIONS = 1000
-# TRACED_LIGHT_POINTS = 64
+VERTEX_LIGHT_ENABLED = True
 
 # Half of the size of the delta box when using the delta-box lighting method
-BOXED_LIGHT_DELTA = 0.04
+VERTEX_LIGHT_DELTA_BOX_SIZE = 0.5
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
@@ -277,8 +267,6 @@ class SegmentInfo:
 			if (result):
 				volume = (2.0 * result[1].x) * (2.0 * result[1].y) * (2.0 * result[1].z)
 				
-				# print(f"\t Box: {result[0]} {result[1]} {volume}")
-				
 				intersected += 1
 				total += volume
 		
@@ -304,25 +292,23 @@ def doVertexLights(x, y, z, a, gc, normal):
 	"""
 	
 	# Find the size and half of the volume of the delta box
-	delta_box_size = Vector3(BOXED_LIGHT_DELTA, BOXED_LIGHT_DELTA, BOXED_LIGHT_DELTA)
-	delta_box_volume = ((2.0 * BOXED_LIGHT_DELTA) ** 3)
+	delta_box_size = Vector3(VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE)
+	half_delta_box_volume = 4.0 * ((VERTEX_LIGHT_DELTA_BOX_SIZE) ** 3)
 	
 	# Find the box with largest volume intresecting the box around this vertex
 	accum, isect = gc.boxcast(Vector3(x, y, z), delta_box_size)
 	
 	# Find the light based on the volume taken
-	shade = ((max(accum - (0.5 * delta_box_volume), 0)) / (0.5 * delta_box_volume))
+	shade = ((max(accum - (half_delta_box_volume), 0)) / (half_delta_box_volume))
 	
-	# print(f"{x} {y} {z}  accum {accum}   count {isect}   shade {shade}")
-	
-	return a * (1.0 - 0.38 * shade ** 0.2)
+	return a * (1.0 - 0.46 * shade ** 0.3)
 
 def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
 	Do any final colour correction operations and per-vertex lighting.
 	"""
 	
-	if (ENABLE_VERTEX_LIGHT):
+	if (VERTEX_LIGHT_ENABLED):
 		a = doVertexLights(x, y, z, a, gc, normal)
 	
 	return r * 0.5, g * 0.5, b * 0.5, a if not DISABLE_LIGHT else 1.0
@@ -859,26 +845,15 @@ def bakeMesh(data, path, templates_path = None):
 	Bake a mesh from Smash Hit segment data
 	"""
 	
-	boxes = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {}).boxes
+	seg = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
+	boxes = seg.boxes
 	
 	meshData = []
 	
 	for box in boxes:
 		meshData += box.bakeGeometry()
 	
-	writeMeshBinary(meshData, path, boxes[0].segment_info)
-
-def raytrace(path, templates_path = None):
-	"""
-	Simple raytrace scene to stdout as PPM P3
-	"""
-	
-	f = open(path, "r")
-	data = f.read()
-	f.close()
-	
-	seg = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
-	seg.raytrace()
+	writeMeshBinary(meshData, path, seg)
 
 def main(input_file, output_file, template_file = None):
 	f = open(input_file, "r")
@@ -888,8 +863,4 @@ def main(input_file, output_file, template_file = None):
 	bakeMesh(data, output_file, template_file)
 
 if (__name__ == "__main__"):
-	if (sys.argv[1] == "/raytrace"):
-		raytrace(sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)
-		sys.exit(0)
-	
 	main(sys.argv[1], sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)
