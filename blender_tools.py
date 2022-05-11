@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 17),
+	"version": (1, 99, 18),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -186,8 +186,19 @@ def sh_add_object(level_root, scene, obj, params):
 	
 	# Set tile info for boxes if visible and there is no template specified
 	if (sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
-		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
-		properties["tile"] = str(obj.sh_properties.sh_tile)
+		
+		# Depending on if colour per side is selected
+		if (not obj.sh_properties.sh_use_multitint):
+			properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2])
+		else:
+			properties["color"] = str(obj.sh_properties.sh_tint1[0]) + " " + str(obj.sh_properties.sh_tint1[1]) + " " + str(obj.sh_properties.sh_tint1[2]) + " " + str(obj.sh_properties.sh_tint2[0]) + " " + str(obj.sh_properties.sh_tint2[1]) + " " + str(obj.sh_properties.sh_tint2[2]) + " " + str(obj.sh_properties.sh_tint3[0]) + " " + str(obj.sh_properties.sh_tint3[1]) + " " + str(obj.sh_properties.sh_tint3[2])
+		
+		# Depnding on if tile per side is selected
+		if (not obj.sh_properties.sh_use_multitile):
+			properties["tile"] = str(obj.sh_properties.sh_tile)
+		else:
+			properties["tile"] = str(obj.sh_properties.sh_tile1) + " " + str(obj.sh_properties.sh_tile2) + " " + str(obj.sh_properties.sh_tile3)
+		
 		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
 		if (obj.sh_properties.sh_tilerot[1] > 0.0 or obj.sh_properties.sh_tilerot[2] > 0.0 or obj.sh_properties.sh_tilerot[0] > 0.0):
 			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[0]) + " " + str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2])
@@ -364,31 +375,34 @@ def tryTemplatesPath():
 	Try to get the path of the templates.xml file automatically
 	"""
 	
-	print("Smash Hit Tools: Auto find templates invoked.")
-	
-	# Get the search path
-	search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
-	
-	print(f"Smash Hit Tools: Try to search in: \"{search_path}\"")
-	
-	# Enumerate files
-	dirs = os.listdir(search_path)
-	
-	# Search for templates.xml and set path
-	path = ""
-	
-	for d in dirs:
-		cand = search_path + "/" + d + "/assets/templates.xml.mp3"
+	try:
+		print("Smash Hit Tools: Auto find templates invoked.")
 		
-		print(f"Smash Hit Tools: Try file: \"{cand}\"")
+		# Get the search path
+		search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
 		
-		if ospath.exists(cand):
-			path = cand
-			break
-	
-	print(f"Smash Hit Tools: Got file: \"{path}\"")
-	
-	return path
+		print(f"Smash Hit Tools: Try to search in: \"{search_path}\"")
+		
+		# Enumerate files
+		dirs = os.listdir(search_path)
+		
+		# Search for templates.xml and set path
+		path = ""
+		
+		for d in dirs:
+			cand = search_path + "/" + d + "/assets/templates.xml.mp3"
+			
+			print(f"Smash Hit Tools: Try file: \"{cand}\"")
+			
+			if ospath.exists(cand):
+				path = cand
+				break
+		
+		print(f"Smash Hit Tools: Got file: \"{path}\"")
+		
+		return path
+	except FileNotFoundError:
+		return ""
 
 class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	"""
@@ -567,6 +581,33 @@ def sh_import_modes(s):
 	
 	return res
 
+def sh_parse_tile(s):
+	"""
+	Parse tile strings
+	"""
+	
+	a = s.split(" ")
+	
+	for i in range(len(a)):
+		a = max(min(int(a[i]), 63), 0)
+	
+	return a
+
+def sh_parse_colour(s):
+	"""
+	Parse colour strings
+	"""
+	
+	a = s.split(" ")
+	
+	# Remove remaining space strings
+	a = [i for i in a if i != " "]
+	
+	if (len(a) < 9):
+		return [(float(a[0]), float(a[1]), float(a[2]))]
+	else:
+		return [(float(a[0]), float(a[1]), float(a[2])), (float(a[3]), float(a[4]), float(a[5])), (float(a[6]), float(a[7]), float(a[8]))]
+
 def sh_import_segment(fp, context, compressed = False):
 	"""
 	Load a Smash Hit segment into blender
@@ -640,12 +681,27 @@ def sh_import_segment(fp, context, compressed = False):
 			# include visible if there is a template and visible is not set.
 			b.sh_properties.sh_visible = (properties.get("visible", "1") == "1" and not b.sh_properties.sh_template)
 			
-			# NOTE: colorX/Y/Z are from an old segment format
-			colour = properties.get("color", properties.get("colorX", "0.5 0.5 0.5")).split(" ")
-			b.sh_properties.sh_tint = (float(colour[0]), float(colour[1]), float(colour[2]), 1.0)
+			# NOTE: The older format colorX/Y/Z is no longer supported, should it be readded?
+			colour = sh_parse_colour(properties.get("color", "0.5 0.5 0.5"))
 			
-			# NOTE: tileX/Y/Z are from an old segment format
-			b.sh_properties.sh_tile = int(properties.get("tile", properties.get("tileX", "0")).split(" ")[0])
+			if (len(colour) == 1):
+				b.sh_properties.sh_tint = (colour[0][0], colour[0][1], colour[0][2], 1.0)
+			else:
+				b.sh_properties.sh_use_multitint = True
+				b.sh_properties.sh_tint1 = (colour[0][0], colour[0][1], colour[0][2], 1.0)
+				b.sh_properties.sh_tint2 = (colour[1][0], colour[1][1], colour[1][2], 1.0)
+				b.sh_properties.sh_tint3 = (colour[2][0], colour[2][1], colour[2][2], 1.0)
+			
+			# NOTE: The older format tileX/Y/Z is no longer supported, should it be readded?
+			tile = sh_parse_tile(properties.get("tile", "0"))
+			
+			if (len(tile) == 1):
+				b.sh_properties.sh_tile = tile[0]
+			else:
+				b.sh_properties.sh_use_multitile = True
+				b.sh_properties.sh_tile1 = tile[0]
+				b.sh_properties.sh_tile2 = tile[1]
+				b.sh_properties.sh_tile3 = tile[2]
 		
 		# Obstacles
 		elif (kind == "obstacle"):
@@ -905,10 +961,40 @@ class sh_EntityProperties(PropertyGroup):
 		default = False
 		)
 	
+	sh_use_multitile: BoolProperty(
+		name = "Tile per-side",
+		description = "Specifiy a colour for each parallel pair of faces on the box",
+		default = False,
+		)
+	
 	sh_tile: IntProperty(
 		name = "Tile",
 		description = "The texture that will appear on the surface of the box or decal",
-		default = 1,
+		default = 0,
+		min = 0,
+		max = 63
+		)
+	
+	sh_tile1: IntProperty(
+		name = "Right Left",
+		description = "The texture that will appear on the surface of the box or decal",
+		default = 0,
+		min = 0,
+		max = 63
+		)
+	
+	sh_tile2: IntProperty(
+		name = "Top Bottom",
+		description = "The texture that will appear on the surface of the box or decal",
+		default = 0,
+		min = 0,
+		max = 63
+		)
+	
+	sh_tile3: IntProperty(
+		name = "Front Back",
+		description = "The texture that will appear on the surface of the box or decal",
+		default = 0,
 		min = 0,
 		max = 63
 		)
@@ -1046,8 +1132,44 @@ class sh_EntityProperties(PropertyGroup):
 		default = False
 		)
 	
+	sh_use_multitint: BoolProperty(
+		name = "Colour per-side",
+		description = "Specifiy a colour for each parallel pair of faces on the box",
+		default = False,
+		)
+	
 	sh_tint: FloatVectorProperty(
 		name = "Colour",
+		description = "The colour to be used for tinting, colouring and mesh data",
+		subtype = "COLOR_GAMMA",
+		default = (0.5, 0.5, 0.5, 1.0), 
+		size = 4,
+		min = 0.0,
+		max = 1.0
+	)
+	
+	sh_tint1: FloatVectorProperty(
+		name = "Right Left",
+		description = "The colour to be used for tinting, colouring and mesh data",
+		subtype = "COLOR_GAMMA",
+		default = (0.5, 0.5, 0.5, 1.0), 
+		size = 4,
+		min = 0.0,
+		max = 1.0
+	)
+	
+	sh_tint2: FloatVectorProperty(
+		name = "Top Bottom",
+		description = "The colour to be used for tinting, colouring and mesh data",
+		subtype = "COLOR_GAMMA",
+		default = (0.5, 0.5, 0.5, 1.0), 
+		size = 4,
+		min = 0.0,
+		max = 1.0
+	)
+	
+	sh_tint3: FloatVectorProperty(
+		name = "Front Back",
 		description = "The colour to be used for tinting, colouring and mesh data",
 		subtype = "COLOR_GAMMA",
 		default = (0.5, 0.5, 0.5, 1.0), 
@@ -1138,19 +1260,44 @@ class sh_ObstaclePanel(Panel):
 			layout.prop(sh_properties, "sh_decal")
 		
 		# Template for boxes and obstacles
-		if (   sh_properties.sh_type == "OBS"
-		    or sh_properties.sh_type == "BOX"):
+		if (sh_properties.sh_type == "OBS" or (sh_properties.sh_type == "BOX" and not sh_properties.sh_visible)):
 			layout.prop(sh_properties, "sh_template")
 		
 		# Refelective and tile property for boxes
 		if (sh_properties.sh_type == "BOX"):
-			layout.prop(sh_properties, "sh_visible")
-			if (sh_properties.sh_visible):
-				layout.prop(sh_properties, "sh_tile")
-				layout.prop(sh_properties, "sh_tilesize")
-				layout.prop(sh_properties, "sh_tint")
-				layout.prop(sh_properties, "sh_tilerot")
 			layout.prop(sh_properties, "sh_reflective")
+			layout.prop(sh_properties, "sh_visible")
+			
+			if (sh_properties.sh_visible):
+				sub = layout.box()
+				
+				sub.label(text = "Colour", icon = "COLOR")
+				if (not sh_properties.sh_use_multitint):
+					sub.prop(sh_properties, "sh_use_multitint", text = "Uniform", toggle = 1)
+					sub.prop(sh_properties, "sh_tint")
+				else:
+					sub.prop(sh_properties, "sh_use_multitint", text = "Per-axis", toggle = 1)
+					sub.prop(sh_properties, "sh_tint1")
+					sub.prop(sh_properties, "sh_tint2")
+					sub.prop(sh_properties, "sh_tint3")
+				
+				sub = layout.box()
+				
+				sub.label(text = "Tile", icon = "TEXTURE")
+				if (not sh_properties.sh_use_multitile):
+					sub.prop(sh_properties, "sh_use_multitile", text = "Uniform", toggle = 1)
+					sub.prop(sh_properties, "sh_tile")
+				else:
+					sub.prop(sh_properties, "sh_use_multitile", text = "Per-axis", toggle = 1)
+					sub.prop(sh_properties, "sh_tile1")
+					sub.prop(sh_properties, "sh_tile2")
+					sub.prop(sh_properties, "sh_tile3")
+				
+				sub = layout.box()
+				
+				sub.label(text = "Transforms", icon = "GRAPH")
+				sub.prop(sh_properties, "sh_tilesize")
+				sub.prop(sh_properties, "sh_tilerot")
 		
 		# Colourisation and blend for decals
 		if (sh_properties.sh_type == "DEC"):
@@ -1183,19 +1330,21 @@ class sh_ObstaclePanel(Panel):
 		
 		# Paramaters for boxes
 		if (sh_properties.sh_type == "OBS"):
-			layout.label(text = "Properties")
-			layout.prop(sh_properties, "sh_param0", text = "")
-			layout.prop(sh_properties, "sh_param1", text = "")
-			layout.prop(sh_properties, "sh_param2", text = "")
-			layout.prop(sh_properties, "sh_param3", text = "")
-			layout.prop(sh_properties, "sh_param4", text = "")
-			layout.prop(sh_properties, "sh_param5", text = "")
-			layout.prop(sh_properties, "sh_param6", text = "")
-			layout.prop(sh_properties, "sh_param7", text = "")
-			layout.prop(sh_properties, "sh_param8", text = "")
-			layout.prop(sh_properties, "sh_param9", text = "")
-			layout.prop(sh_properties, "sh_param10", text = "")
-			layout.prop(sh_properties, "sh_param11", text = "")
+			sub = layout.box()
+			
+			sub.label(text = "Parameters", icon = "SETTINGS")
+			sub.prop(sh_properties, "sh_param0", text = "")
+			sub.prop(sh_properties, "sh_param1", text = "")
+			sub.prop(sh_properties, "sh_param2", text = "")
+			sub.prop(sh_properties, "sh_param3", text = "")
+			sub.prop(sh_properties, "sh_param4", text = "")
+			sub.prop(sh_properties, "sh_param5", text = "")
+			sub.prop(sh_properties, "sh_param6", text = "")
+			sub.prop(sh_properties, "sh_param7", text = "")
+			sub.prop(sh_properties, "sh_param8", text = "")
+			sub.prop(sh_properties, "sh_param9", text = "")
+			sub.prop(sh_properties, "sh_param10", text = "")
+			sub.prop(sh_properties, "sh_param11", text = "")
 		
 		# Option to export object or not
 		layout.prop(sh_properties, "sh_export")

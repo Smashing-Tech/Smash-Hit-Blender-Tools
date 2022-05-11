@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 12, 0)
+VERSION = (0, 13, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -50,7 +50,7 @@ DISABLE_LIGHT = False
 VERTEX_LIGHT_ENABLED = True
 
 # Half of the size of the delta box when using the delta-box lighting method
-VERTEX_LIGHT_DELTA_BOX_SIZE = 0.5
+VERTEX_LIGHT_DELTA_BOX_SIZE = 0.25
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
@@ -92,7 +92,7 @@ class Vector3:
 		array = [float(array[i]) for i in range(len(array))]
 		
 		# Handle overloaded string array
-		if (many and len(array) % 3 != 0):
+		if (many and len(array) >= 6 and (len(array) % 3) == 0):
 			vectors = []
 			
 			for i in range(len(array) // 3):
@@ -289,17 +289,21 @@ def doVertexLights(x, y, z, a, gc, normal):
 	
 	This has some issues: overlaping boxes can cause the algorithm to overshade
 	some point dramatically.
+	
+	Updated for 0.13: Now it increments the position by normal * deltaboxsize so
+	we are closer to just a raycast
 	"""
 	
 	# Find the size and half of the volume of the delta box
 	delta_box_size = Vector3(VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE)
-	half_delta_box_volume = 4.0 * ((VERTEX_LIGHT_DELTA_BOX_SIZE) ** 3)
+	delta_box_volume = 8.0 * ((VERTEX_LIGHT_DELTA_BOX_SIZE) ** 3)
 	
 	# Find the box with largest volume intresecting the box around this vertex
-	accum, isect = gc.boxcast(Vector3(x, y, z), delta_box_size)
+	accum, isect = gc.boxcast(Vector3(x, y, z) + normal * VERTEX_LIGHT_DELTA_BOX_SIZE, delta_box_size)
 	
 	# Find the light based on the volume taken
-	shade = ((max(accum - (half_delta_box_volume), 0)) / (half_delta_box_volume))
+	# This is min/max'd to not cause major issues if there is an overlaping box
+	shade = min(max(accum, 0), delta_box_volume) / delta_box_volume
 	
 	return a * (1.0 - 0.46 * shade ** 0.3)
 

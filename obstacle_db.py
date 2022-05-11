@@ -1,3 +1,5 @@
+import pathlib
+
 # For obstacle picker
 OBSTACLES = [
 	("boss/cube", "Boss: Cube", ""),
@@ -65,7 +67,23 @@ OBSTACLES = [
 	("credits2", "Credits obstacle 2", ""),
 	("gyro", "Gyro", ""),
 	("suspendbox", "Suspended box", ""),
+	None,
 ]
 
 # For search in free-form entry
 OBSTACLES_LIST = ["3dcross", "babytoy", "bar", "beatmill", "beatsweeper", "beatwindow", "bigcrank", "bigpendulum", "boss", "bowling", "box", "cactus", "credits1", "credits2", "creditssign", "cubeframe", "dna", "doors", "dropblock", "elevatorgrid", "elevator", "fence", "flycube", "foldwindow", "framedwindow", "gear", "grid", "gyro", "hitblock", "laser", "levicube", "ngon", "pyramid", "revolver", "rotor", "scorediamond", "scoremulti", "scorestar", "scoretop", "sidesweeper", "stone", "suspendbox", "suspendcube", "suspendcylinder", "suspendhollow", "suspendside", "suspendwindow", "sweeper", "test", "tree", "vs_door", "vs_sweeper", "vs_wall", "boss/cube", "boss/matryoshka", "boss/single", "boss/telecube", "boss/triple", "doors/45", "doors/basic", "doors/double", "fence/carousel", "fence/dna", "fence/slider"]
+
+# Find custom obstacles
+try:
+	with open(str(pathlib.Path.home()) + "/smash-hit-obstacles.txt", "r") as f:
+		content = f.read()
+		content = content.split("\n")
+		
+		for obs in content:
+			s = obs.split("=")
+			
+			if (len(s) == 2 and not s[0].startswith("#")):
+				OBSTACLES.append((s[0], s[1], ""))
+				OBSTACLES_LIST.append(s[0])
+except FileNotFoundError:
+	print("Smash Hit Blender Tools: " + str(__name__) + ": Could not find text file for custom obstacles!")
