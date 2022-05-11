@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 0)
+VERSION = (0, 13, 1)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -422,7 +422,6 @@ class Quad:
 		index = [offset + 0, offset + 1, offset + 2, offset + 0, offset + 2, offset + 3]
 		
 		# Swap winding order in some situations so triangles don't get culled
-		# 
 		if ((p1.x == p3.x and p1.x > 0) or (p1.y == p3.y and p1.y <= 1)):
 			index[0], index[2] = index[2], index[0]
 			index[3], index[5] = index[5], index[3]
@@ -624,7 +623,7 @@ class Box:
 				tileSize[2], tileSize[2],
 				colour[0].withLight(seg.right),
 				tile[0],
-				tileRot[0],
+				(tileRot[0] + 1) % 4,
 				seg,
 				Vector3(1.0, 0.0, 0.0)
 			)
@@ -636,7 +635,7 @@ class Box:
 				tileSize[2], tileSize[2],
 				colour[0].withLight(seg.left),
 				tile[0],
-				tileRot[0],
+				(tileRot[0] + 1) % 4,
 				seg,
 				Vector3(-1.0, 0.0, 0.0)
 			)
@@ -648,7 +647,7 @@ class Box:
 				tileSize[1], tileSize[1],
 				colour[1].withLight(seg.top),
 				tile[1],
-				tileRot[1],
+				(tileRot[1] + 2) % 4,
 				seg,
 				Vector3(0.0, 1.0, 0.0)
 			)
@@ -660,7 +659,7 @@ class Box:
 				tileSize[1], tileSize[1],
 				colour[1].withLight(seg.bottom),
 				tile[1],
-				tileRot[1],
+				(tileRot[1] + 2) % 4,
 				seg,
 				Vector3(0.0, -1.0, 0.0)
 			)
@@ -671,7 +670,7 @@ class Box:
 			tileSize[0], tileSize[0],
 			colour[2].withLight(seg.front),
 			tile[2],
-			tileRot[2] + 3,
+			tileRot[2],
 			seg, 
 			Vector3(0.0, 0.0, 1.0)
 		)
@@ -683,7 +682,7 @@ class Box:
 				tileSize[0], tileSize[0],
 				colour[2].withLight(seg.back),
 				tile[2],
-				tileRot[2] + 3,
+				tileRot[2],
 				seg,
 				Vector3(0.0, 0.0, -1.0)
 			)

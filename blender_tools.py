@@ -8,11 +8,11 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 18),
+	"version": (1, 99, 19),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
-	"wiki_url": "https://smashingmods.fandom.com/wiki/Knot126/Smash_Hit_Blender_Tools",
+	"wiki_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/wiki",
 	"tracker_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/issues",
 	"category": "Development",
 }
@@ -52,12 +52,12 @@ def sh_create_root(scene, params):
 	}
 	
 	# Lighting
-	if (scene.sh_light[0] != 1.0): seg_props["lightLeft"] = str(scene.sh_light[0])
-	if (scene.sh_light[1] != 1.0): seg_props["lightRight"] = str(scene.sh_light[1])
-	if (scene.sh_light[2] != 1.0): seg_props["lightTop"] = str(scene.sh_light[2])
-	if (scene.sh_light[3] != 1.0): seg_props["lightBottom"] = str(scene.sh_light[3])
-	if (scene.sh_light[4] != 1.0): seg_props["lightFront"] = str(scene.sh_light[4])
-	if (scene.sh_light[5] != 1.0): seg_props["lightBack"] = str(scene.sh_light[5])
+	if (scene.sh_light_left != 1.0):   seg_props["lightLeft"] = str(scene.sh_light_left)
+	if (scene.sh_light_right != 1.0):  seg_props["lightRight"] = str(scene.sh_light_right)
+	if (scene.sh_light_top != 1.0):    seg_props["lightTop"] = str(scene.sh_light_top)
+	if (scene.sh_light_bottom != 1.0): seg_props["lightBottom"] = str(scene.sh_light_bottom)
+	if (scene.sh_light_front != 1.0):  seg_props["lightFront"] = str(scene.sh_light_front)
+	if (scene.sh_light_back != 1.0):   seg_props["lightBack"] = str(scene.sh_light_back)
 	
 	# Check for the template attrib and set
 	if (scene.sh_template):
@@ -638,7 +638,12 @@ def sh_import_segment(fp, context, compressed = False):
 	scene.sh_softshadow = float(segattr.get("softshadow", "-0.0001"))
 	
 	# Lights
-	scene.sh_light = (float(segattr.get("lightLeft", "1")), float(segattr.get("lightRight", "1")), float(segattr.get("lightTop", "1")), float(segattr.get("lightBottom", "1")), float(segattr.get("lightFront", "1")), float(segattr.get("lightBack", "1")))
+	scene.sh_light_left = float(segattr.get("lightLeft", "1"))
+	scene.sh_light_right = float(segattr.get("lightRight", "1"))
+	scene.sh_light_top = float(segattr.get("lightTop", "1"))
+	scene.sh_light_bottom = float(segattr.get("lightBottom", "1"))
+	scene.sh_light_front = float(segattr.get("lightFront", "1"))
+	scene.sh_light_back = float(segattr.get("lightBack", "1"))
 	
 	for obj in root:
 		kind = obj.tag
@@ -843,20 +848,67 @@ class sh_SceneProperties(PropertyGroup):
 		)
 	
 	sh_softshadow: FloatProperty(
-		name = "Soft Shadow",
-		description = "Exact function unknown, probably shadow transparency",
+		name = "Soft shadow",
+		description = "Opacity of soft shadow on dynamic objects",
 		default = -0.001,
 		min = -0.001,
 		max = 1.0
 		)
 	
-	sh_light: FloatVectorProperty(
-		name = "Lighting",
-		description = "Light intensity, in this order: left, right, top, bottom, front, back",
-		default = (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+	sh_softshadow: FloatProperty(
+		name = "Soft shadow",
+		description = "Opacity of soft shadow on dynamic objects",
+		default = -0.001,
+		min = -0.001,
+		max = 1.0
+		)
+	
+	sh_light_left: FloatProperty(
+		name = "Left",
+		description = "Light going on to the left side of boxes",
+		default = 1.0,
 		min = 0.0,
-		max = 2.0,
-		size = 6,
+		max = 1.0,
+		)
+	
+	sh_light_right: FloatProperty(
+		name = "Right",
+		description = "Light going on to the right side of boxes",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
+		)
+	
+	sh_light_top: FloatProperty(
+		name = "Top",
+		description = "Light going on to the top side of boxes",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
+		)
+	
+	sh_light_bottom: FloatProperty(
+		name = "Bottom",
+		description = "Light going on to the bottom side of boxes",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
+		)
+	
+	sh_light_front: FloatProperty(
+		name = "Front",
+		description = "Light going on to the front side of boxes",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
+		)
+	
+	sh_light_back: FloatProperty(
+		name = "Back",
+		description = "Light going on to the back side of boxes",
+		default = 1.0,
+		min = 0.0,
+		max = 1.0,
 		)
 
 # Object (box/obstacle/powerup/decal/water) properties
@@ -1000,7 +1052,7 @@ class sh_EntityProperties(PropertyGroup):
 		)
 	
 	sh_tilerot: IntVectorProperty(
-		name = "Orientation",
+		name = "Tile orientation",
 		description = "Orientation of the tile, where 0 is facing up",
 		default = (0, 0, 0), 
 		min = 0,
@@ -1008,7 +1060,7 @@ class sh_EntityProperties(PropertyGroup):
 	) 
 	
 	sh_tilesize: FloatVectorProperty(
-		name = "Size",
+		name = "Tile size",
 		description = "The appearing size of the tiles on the box when exported. In RightLeft, TopBottom, FrontBack",
 		default = (1.0, 1.0, 1.0), 
 		min = 0.0,
@@ -1222,8 +1274,17 @@ class sh_SegmentPanel(Panel):
 		
 		layout.prop(sh_properties, "sh_len")
 		layout.prop(sh_properties, "sh_template")
-		layout.prop(sh_properties, "sh_softshadow")
-		layout.prop(sh_properties, "sh_light")
+		
+		sub = layout.box()
+		sub.label(text = "Light", icon = "LIGHT")
+		sub.prop(sh_properties, "sh_softshadow")
+		sub.prop(sh_properties, "sh_light_right")
+		sub.prop(sh_properties, "sh_light_left")
+		sub.prop(sh_properties, "sh_light_top")
+		sub.prop(sh_properties, "sh_light_bottom")
+		sub.prop(sh_properties, "sh_light_front")
+		sub.prop(sh_properties, "sh_light_back")
+		
 		layout.separator()
 
 class sh_ObstaclePanel(Panel):
