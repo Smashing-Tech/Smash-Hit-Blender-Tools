@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 19),
+	"version": (1, 99, 20),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -168,11 +168,6 @@ def sh_add_object(level_root, scene, obj, params):
 	if (sh_type == "DEC" and obj.sh_properties.sh_havetint):
 		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
 	
-	# Fake lights
-	if (sh_type == "LIG"):
-		properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2]) + " " + str(obj.sh_properties.sh_tint[3])
-		properties["type"] = obj.sh_properties.sh_lighttype
-	
 	# Set blend for decals
 	if (sh_type == "DEC" and obj.sh_properties.sh_blend != 1.0):
 		properties["blend"] = str(obj.sh_properties.sh_blend)
@@ -216,8 +211,6 @@ def sh_add_object(level_root, scene, obj, params):
 		element_type = "powerup"
 	elif (sh_type == "WAT"):
 		element_type = "water"
-	elif (sh_type == "LIG"):
-		element_type = "light"
 	
 	# Add the element to the document
 	el = et.SubElement(level_root, element_type, properties)
@@ -923,7 +916,6 @@ class sh_EntityProperties(PropertyGroup):
 				  ('DEC', "Decal", ""),
 				  ('POW', "Power-up", ""),
 				  ('WAT', "Water", ""),
-				  ('LIG', "Light", "WARNING: This is an unofficial extension which as not been fully developed"),
 				],
 		default = "BOX"
 		)
@@ -1246,15 +1238,6 @@ class sh_EntityProperties(PropertyGroup):
 		max = 256.0,
 		size = 2,
 	)
-	
-	sh_lighttype: EnumProperty(
-		name = "Type",
-		description = "Light type",
-		items = [
-			('point', "Point", "Point light"),
-		],
-		default = "point",
-		)
 
 class sh_SegmentPanel(Panel):
 	bl_label = "Segment Properties"
@@ -1379,11 +1362,6 @@ class sh_ObstaclePanel(Panel):
 		# Size for decals
 		if (sh_properties.sh_type == "DEC"):
 			layout.prop(sh_properties, "sh_size")
-		
-		# Fake lights
-		if (sh_properties.sh_type == "LIG"):
-			layout.prop(sh_properties, "sh_tint")
-			layout.prop(sh_properties, "sh_lighttype")
 		
 		# Hidden property
 		if (sh_properties.sh_type != "BOX"):

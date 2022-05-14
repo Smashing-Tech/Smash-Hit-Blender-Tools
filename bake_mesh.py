@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 1)
+VERSION = (0, 13, 2)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -39,25 +39,15 @@ BAKE_IGNORE_TILESIZE = False
 # Randomises colours of quads for debugging purposes.
 PARTY_MODE = False
 
-# Disables the use of the shadow attribute (though it will still be computed)
-# This option only exsists for segments that were baked with legacy MeshBake v0.2.0
-# and may be removed before 1.0.0
-DISABLE_LIGHT = False
-
-# Disables per-vertex traced lighting if not already disabled by DISABLE_LIGHT
-# Note: This takes a VERY LONG time to complete and is currently not finished!
-# Enable at your own risk!
+# Enable vertex lighting using delta boxes
 VERTEX_LIGHT_ENABLED = True
 
 # Half of the size of the delta box when using the delta-box lighting method
-VERTEX_LIGHT_DELTA_BOX_SIZE = 0.25
+VERTEX_LIGHT_DELTA_BOX_SIZE = 0.5
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
 ################################################################################
-
-# UNIT_HEMISPHERE_POINTS = uniformpoints.distributePointsOnUnitHemisphere(TRACED_LIGHT_ITERATIONS, TRACED_LIGHT_POINTS)
-# TRACED_LIGHT_POINTS_INV = 1 / TRACED_LIGHT_POINTS
 
 def removeEverythingEqualTo(array, value):
 	"""
@@ -75,10 +65,11 @@ class Vector3:
 	(Hopefully) simple implementation of a Vector3
 	"""
 	
-	def __init__(self, x = 0.0, y = 0.0, z = 0.0):
+	def __init__(self, x = 0.0, y = 0.0, z = 0.0, a = 1.0):
 		self.x = x
 		self.y = y
 		self.z = z
+		self.a = a
 	
 	@classmethod
 	def fromString(self, string, many = False):
@@ -154,34 +145,6 @@ class Vector3:
 		y = self.z * other.x - self.x * other.z
 		z = self.x * other.y - self.y * other.x
 		return Vector3(x, y, z)
-	
-	def rotate_to(self, other):
-		"""
-		This will rotate the current (self) to be as if the other were the up
-		vector (normal). This is a pretty lazy implementation since we know the
-		six possible inputs and their results. It might be possible to do this
-		by solving for a matrix. It is not possible to do this with the cross
-		product.
-		"""
-		
-		v = self.copy()
-		
-		if (other == Vector3(1.0, 0.0, 0.0)):
-			v.x, v.y = v.y, v.x
-		elif (other == Vector3(-1.0, 0.0, 0.0)):
-			v.x, v.y = v.y, -v.x
-		elif (other == Vector3(0.0, 1.0, 0.0)):
-			pass
-		elif (other == Vector3(0.0, -1.0, 0.0)):
-			v.y = -v.y
-		elif (other == Vector3(0.0, 0.0, 1.0)):
-			v.y, v.z = v.z, v.y
-		elif (other == Vector3(0.0, 0.0, -1.0)):
-			v.y, v.z = v.z, -v.y
-		else:
-			print(f"warning: vector {other} not supported for rotate_to")
-		
-		return v
 	
 	def copy(self):
 		return Vector3(self.x, self.y, self.z)
@@ -305,7 +268,7 @@ def doVertexLights(x, y, z, a, gc, normal):
 	# This is min/max'd to not cause major issues if there is an overlaping box
 	shade = min(max(accum, 0), delta_box_volume) / delta_box_volume
 	
-	return a * (1.0 - 0.46 * shade ** 0.3)
+	return (a ** 2) * (1.0 - 0.47 * shade ** 0.3)
 
 def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
@@ -315,7 +278,7 @@ def correctColour(x, y, z, r, g, b, a, gc, normal):
 	if (VERTEX_LIGHT_ENABLED):
 		a = doVertexLights(x, y, z, a, gc, normal)
 	
-	return r * 0.5, g * 0.5, b * 0.5, a if not DISABLE_LIGHT else 1.0
+	return r * 0.5, g * 0.5, b * 0.5, a
 
 def meshPointBytes(x, y, z, u, v, r, g, b, a, gc, normal):
 	"""
