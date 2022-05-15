@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 20),
+	"version": (1, 99, 21),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -579,12 +579,13 @@ def sh_parse_tile(s):
 	Parse tile strings
 	"""
 	
-	a = s.split(" ")
+	string = s.split(" ")
+	final = []
 	
-	for i in range(len(a)):
-		a = max(min(int(a[i]), 63), 0)
+	for i in range(len(string)):
+		final.append(max(min(int(string[i]), 63), 0))
 	
-	return a
+	return final
 
 def sh_parse_colour(s):
 	"""
