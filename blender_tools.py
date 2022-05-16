@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (1, 99, 21),
+	"version": (1, 99, 22),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -546,6 +546,17 @@ def sh_draw_export_gz(self, context):
 ## IMPORT
 ## The following things are related to the importer, which is not complete.
 
+def removeEverythingEqualTo(array, value):
+	"""
+	Remove everything in an array equal to a value
+	"""
+	
+	while (True):
+		try:
+			array.remove(value)
+		except ValueError:
+			return array
+
 def sh_add_box(pos, size):
 	bpy.ops.mesh.primitive_cube_add(size = 1.0, location = (pos[0], pos[1], pos[2]), scale = (size[0] * 2, size[1] * 2, size[2] * 2))
 	return bpy.data.objects[-1] # return newest object
@@ -592,7 +603,7 @@ def sh_parse_colour(s):
 	Parse colour strings
 	"""
 	
-	a = s.split(" ")
+	a = removeEverythingEqualTo(s.split(" "), "")
 	
 	# Remove remaining space strings
 	a = [i for i in a if i != " "]
