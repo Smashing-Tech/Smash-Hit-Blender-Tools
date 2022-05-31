@@ -1,0 +1,170 @@
+/* Carambola Website CSS */
+@import url('https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;700&display=swap');
+
+/* Remove default padding */
+* { margin: 0; padding: 0; }
+
+h1, h2, h3, h4, p, li {
+	font-family: "Maven Pro", sans-serif;
+	margin-top: 0.15em;
+	margin-bottom: 0.5em;
+}
+
+h1 { font-size: 42pt; color: #068367; text-align: center; }
+h2 { font-size: 28pt; color: #068367; text-align: center; }
+h3 { font-size: 22pt; }
+h4 { font-size: 18pt; }
+p, ul { font-size: 15pt; margin-bottom: 0.75em; }
+ul { margin-left: 1em; }
+.cb-quote { font-size: 20pt; line-height: 1.5; }
+
+a {
+	color: #fff;
+	text-decoration-line: none;
+	border-radius: 0.2em;
+}
+
+a:hover {
+	background: #ffffff3a;
+}
+
+::selection {
+	background: #068367;
+	color: #fff;
+}
+
+body {
+	background-image: url("./background.png");
+	background-size: cover;
+	background-attachment: fixed;
+	color: rgb(0, 0, 0);
+}
+
+.main-section {
+	border: none;
+	background: #e4f0f4d0;
+	max-width: 60em;
+	margin: auto;
+	margin-top: 0;
+	padding: 1em;
+	border-radius: 0.25em;
+}
+
+.main-section a {
+	color: #068367;
+	text-decoration-line: none;
+	border-radius: 0.2em;
+}
+
+.main-section a:hover {
+	background: #0683673a;
+}
+
+.navbar-section {
+	background: #5c7175;
+	border: none;
+	border-radius: 0.325em;
+	color: #fff;
+	padding: 1em;
+	margin: auto;
+	margin-top: 2em;
+	max-width: 60em;
+}
+
+.cb-top-item {
+	margin-right: 1.0em;
+	font-size: 14pt;
+	display: inline-block;
+	vertical-align: middle;
+	font-family: "Maven Pro", sans-serif;
+}
+
+.cb-logo-item {
+	margin-right: 2em;
+	font-size: 18pt;
+	display: inline-block;
+	vertical-align: middle;
+	font-family: "Maven Pro", sans-serif;
+}
+
+.bottom-section {
+	background: #5c7175;
+	border-radius: 0.25em;
+	text-align: center;
+	padding: 1em;
+	color: #fff;
+	margin: auto;
+	margin-top: 0;
+	margin-bottom: 2em;
+	max-width: 60em;
+}
+
+.bottom-section p, .notice-section p {
+	margin: 0;
+}
+
+.nc-top {
+	border-radius: 0 0 0.325em 0.325em;
+}
+
+.nc-bottom {
+	border-radius: 0.325em 0.325em 0 0;
+}
+
+.top-section {
+	border-top: none;
+	border-radius: 0 0 0.325em 0.325em;
+	margin-top: 0;
+	vertical-align: middle;
+	max-width: 50em;
+}
+
+.top-item {
+	margin-right: 1.0em;
+	font-size: 14pt;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+/* This assumes that common.css has already been linked. */
+
+.carambola-big {
+	font-size: 24pt;
+	font-weight: 700;
+}
+
+.carambola-download p {
+	margin: 0;
+}
+
+.carambola-download {
+	float: right;
+	max-width: 40%;
+	padding: 0.75em;
+}
+
+.carambola-download-box {
+	padding: 1em;
+	border-radius: 0.2em;
+	background: #456dbc;
+	color: #fff;
+	cursor: pointer;
+	overflow: auto;
+	margin-bottom: 0.75em;
+}
+
+.carambola-download-box:hover {
+	background: #2b4575;
+}
+
+.carambola-download-left {
+	float: left;
+	width: 50px;
+}
+
+.carambola-download-right {
+	float: right;
+	width: calc(100% - 50px - 0.4em);
+	padding-left: 0.4em;
+}
+
