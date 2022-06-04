@@ -18,10 +18,17 @@ p, ul { font-size: 15pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
 .cb-quote { font-size: 20pt; line-height: 1.5; }
 
+@media (prefers-color-scheme: dark) {
+	h1, h2 {
+		color: #09c398;
+	}
+}
+
 a {
 	color: #fff;
 	text-decoration-line: none;
 	border-radius: 0.2em;
+	transition: background 0.3s;
 }
 
 a:hover {
@@ -38,6 +45,12 @@ body {
 	background-size: cover;
 	background-attachment: fixed;
 	color: rgb(0, 0, 0);
+}
+
+@media (prefers-color-scheme: dark) {
+	body {
+		background-image: url("./background-dark.png");
+	}
 }
 
 .main-section {
@@ -60,8 +73,19 @@ body {
 	background: #0683673a;
 }
 
+@media (prefers-color-scheme: dark) {
+	.main-section {
+		background: #1b1d2bf0;
+		color: #fff;
+	}
+	
+	.main-section a {
+		color: #09c398;
+	}
+}
+
 .navbar-section {
-	background: #5c7175;
+	background: #068367;
 	border: none;
 	border-radius: 0.325em;
 	color: #fff;
@@ -88,7 +112,7 @@ body {
 }
 
 .bottom-section {
-	background: #5c7175;
+	background: #068367;
 	border-radius: 0.25em;
 	text-align: center;
 	padding: 1em;
@@ -104,11 +128,13 @@ body {
 }
 
 .nc-top {
-	border-radius: 0 0 0.325em 0.325em;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
 }
 
 .nc-bottom {
-	border-radius: 0.325em 0.325em 0 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
 }
 
 .top-section {
@@ -146,15 +172,16 @@ body {
 .carambola-download-box {
 	padding: 1em;
 	border-radius: 0.2em;
-	background: #456dbc;
+	background: #068367;
 	color: #fff;
 	cursor: pointer;
 	overflow: auto;
 	margin-bottom: 0.75em;
+	transition: background 0.3s;
 }
 
 .carambola-download-box:hover {
-	background: #2b4575;
+	background: #044d3c;
 }
 
 .carambola-download-left {
