@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 2)
+VERSION = (0, 14, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -44,6 +44,9 @@ VERTEX_LIGHT_ENABLED = True
 
 # Half of the size of the delta box when using the delta-box lighting method
 VERTEX_LIGHT_DELTA_BOX_SIZE = 0.5
+
+# Sets the mode for faked global illumination. Options are "None" and "Fast"
+GLOBAL_ILLUMINATION_TYPE = "Fast"
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
@@ -146,6 +149,9 @@ class Vector3:
 		z = self.x * other.y - self.y * other.x
 		return Vector3(x, y, z)
 	
+	def compose(self, other):
+		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
+	
 	def copy(self):
 		return Vector3(self.x, self.y, self.z)
 	
@@ -235,6 +241,44 @@ class SegmentInfo:
 		
 		return (total, intersected)
 
+def doFastGI(x, y, z, r, g, b, gc):
+	"""
+	Does a rough approximation of global illumination for the current point.
+	This is very engineered and very approximate.
+	"""
+	
+	# Find the intensity of light with avg. radius r and distance d
+	findIntenstity = lambda r, d : 1 / (1 + (1 / (1 + r)) * d)
+	
+	for box in gc.boxes:
+		# Find the point coordinates
+		point = Vector3(x, y, z)
+		
+		# Make the colour
+		old_colour = Vector3(r, g, b)
+		
+		# Compute difference from point to box origin
+		difference = (box.pos - point)
+		distance = difference.length()
+		
+		# Find the nearest side coordinate index
+		facing_side = (0 if (abs(difference.x) < abs(difference.y) and abs(difference.x) < abs(difference.z)) else (1 if (abs(difference.y) < abs(difference.z)) else 2))
+		
+		# Set box colour
+		box_colour = box.colour[facing_side]
+		
+		# Find the "radius" of the box
+		radius = [abs(difference.x), abs(difference.y), abs(difference.z)][facing_side]
+		
+		# Find the new colour of the point based on how much light was added to
+		# the point and its intensity.
+		t = 0.1 * findIntenstity(radius, distance)
+		new_colour = old_colour * (1 - t) + (old_colour.compose(box_colour) * t)
+		
+		r, g, b = new_colour.x, new_colour.y, new_colour.z
+	
+	return (r, g, b)
+
 def doVertexLights(x, y, z, a, gc, normal):
 	"""
 	Compute the light at a vertex
@@ -274,6 +318,9 @@ def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
 	Do any final colour correction operations and per-vertex lighting.
 	"""
+	
+	if (GLOBAL_ILLUMINATION_TYPE == "Fast"):
+		r, g, b = doFastGI(x, y, z, r, g, b, gc)
 	
 	if (VERTEX_LIGHT_ENABLED):
 		a = doVertexLights(x, y, z, a, gc, normal)

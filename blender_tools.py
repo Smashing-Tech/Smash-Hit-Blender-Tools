@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 0),
+	"version": (2, 0, 1),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -302,6 +302,7 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
 		bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
 		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", False)
+		bake_mesh.GLOBAL_ILLUMINATION_TYPE = params.get("bake_vertex_gi", "None")
 		bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	
 	# Write out file
@@ -468,14 +469,24 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 		)
 	
 	bake_vertex_light: BoolProperty(
-		name = "Per-vertex lighting",
-		description = "(Mesh mode only) Enables per-vertex lighting",
+		name = "Ambient occlusion",
+		description = "(Mesh mode only) Enables per-vertex shadowing (ambient occlusion)",
 		default = True
 		)
 	
+	bake_vertex_gi: EnumProperty(
+		name = "Global illumination",
+		description = "(Mesh mode only) Feature not complete, still in testing!!! ",
+		items = [ 
+			('None', "None", "Does not apply global illumination"),
+			('Fast', "Fast", "NewColour = OldColour + (1 / (1 + rd)) * (BoxColour [COMPOSE] OldColour)   where r is avg box size and d is distance from box"),
+		],
+		default = "None"
+		)
+	
 	bake_partymode: BoolProperty(
-		name = "Party mode",
-		description = "(Mesh mode only) Try it :o)",
+		name = "Fun mode",
+		description = "(Mesh mode only)",
 		default = False
 		)
 
@@ -503,6 +514,7 @@ class sh_export(sh_ExportCommon):
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
 				"bake_vertex_light": self.bake_vertex_light,
+				"bake_vertex_gi": self.bake_vertex_gi,
 				"bake_partymode": self.bake_partymode,
 			}
 		)
@@ -536,6 +548,7 @@ class sh_export_gz(sh_ExportCommon):
 				"bake_unseen_sides": self.bake_unseen_faces,
 				"bake_ignore_tilesize": self.bake_ignore_tilesize,
 				"bake_vertex_light": self.bake_vertex_light,
+				"bake_vertex_gi": self.bake_vertex_gi,
 				"bake_partymode": self.bake_partymode,
 			}
 		)
