@@ -152,6 +152,9 @@ class Vector3:
 	def compose(self, other):
 		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
 	
+	def anticompose(self, other):
+		return Vector3(self.x / other.x, self.y / other.y, self.z / other.z)
+	
 	def copy(self):
 		return Vector3(self.x, self.y, self.z)
 	
@@ -165,6 +168,9 @@ class Vector3:
 		v = self.copy()
 		v.a = light
 		return v
+	
+	def asTuple(self):
+		return (self.x, self.y, self.z)
 	
 	def partialOpposite(self, ax, ay, az):
 		"""
@@ -245,24 +251,33 @@ def doFastGI(x, y, z, r, g, b, gc):
 	"""
 	Does a rough approximation of global illumination for the current point.
 	This is very engineered and very approximate.
+	
+	TODO: Fix bug where lights will show in places they should not show
 	"""
 	
-	# Find the intensity of light with avg. radius r and distance d
-	findIntenstity = lambda r, d : 1 / (1 + (1 / (1 + r)) * d)
+	# TODO: Make these globals
+	FASTGI_LIGHT_AMBIENT = Vector3(0.0, 0.0, 0.0)
+	FASTGI_LIGHT_SPAN = 3
+	
+	# Find the intensity of light with box size r and distance from box d
+	findIntenstity = lambda r, d : min(max(1 - ((1 / FASTGI_LIGHT_SPAN) * (d - r)), 0), 1)
+	
+	# Ambient light
+	old_colour = Vector3(r, g, b)
+	
+	# Colour that will be added to old colour
+	add_colour = Vector3(0.0, 0.0, 0.0)
 	
 	for box in gc.boxes:
 		# Find the point coordinates
 		point = Vector3(x, y, z)
-		
-		# Make the colour
-		old_colour = Vector3(r, g, b)
 		
 		# Compute difference from point to box origin
 		difference = (box.pos - point)
 		distance = difference.length()
 		
 		# Find the nearest side coordinate index
-		facing_side = (0 if (abs(difference.x) < abs(difference.y) and abs(difference.x) < abs(difference.z)) else (1 if (abs(difference.y) < abs(difference.z)) else 2))
+		facing_side = (0 if ((abs(difference.x) > abs(difference.y)) and (abs(difference.x) > abs(difference.z))) else (1 if (abs(difference.y) > abs(difference.z)) else 2))
 		
 		# Set box colour
 		box_colour = box.colour[facing_side]
@@ -272,10 +287,18 @@ def doFastGI(x, y, z, r, g, b, gc):
 		
 		# Find the new colour of the point based on how much light was added to
 		# the point and its intensity.
-		t = 0.1 * findIntenstity(radius, distance)
-		new_colour = old_colour * (1 - t) + (old_colour.compose(box_colour) * t)
-		
-		r, g, b = new_colour.x, new_colour.y, new_colour.z
+		t = findIntenstity(radius, distance)
+		add_colour += (box_colour * t)
+	
+	# Normalise colour with respect to box count so this can't go over 1.0 on
+	# each component
+	add_colour = add_colour * (1 / len(gc.boxes)) * 2.0 # NOTE: * 2.0 is for testing
+	
+	# Get the final colour by adding to base box colour
+	r, g, b = (old_colour.compose(FASTGI_LIGHT_AMBIENT) + add_colour.compose(Vector3(1.0, 1.0, 1.0) - FASTGI_LIGHT_AMBIENT)).asTuple()
+	# r, g, b = add_colour.asTuple()
+	
+	print(f"{add_colour}")
 	
 	return (r, g, b)
 
