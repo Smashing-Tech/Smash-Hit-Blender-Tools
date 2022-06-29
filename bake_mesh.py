@@ -257,21 +257,21 @@ def doFastGI(x, y, z, r, g, b, gc):
 	
 	# TODO: Make these globals
 	FASTGI_LIGHT_AMBIENT = Vector3(0.0, 0.0, 0.0)
-	FASTGI_LIGHT_SPAN = 3
+	FASTGI_LIGHT_SPAN = 5
 	
 	# Find the intensity of light with box size r and distance from box d
-	findIntenstity = lambda r, d : min(max(1 - ((1 / FASTGI_LIGHT_SPAN) * (d - r)), 0), 1)
+	findIntenstity = lambda r, d : min(max(1 - ((d - r) / FASTGI_LIGHT_SPAN), 0), 1)
 	
-	# Ambient light
+	# Set a proper vector for the current colour
 	old_colour = Vector3(r, g, b)
 	
 	# Colour that will be added to old colour
 	add_colour = Vector3(0.0, 0.0, 0.0)
 	
+	# Make a proper vector for the current point coordintes
+	point = Vector3(x, y, z)
+	
 	for box in gc.boxes:
-		# Find the point coordinates
-		point = Vector3(x, y, z)
-		
 		# Compute difference from point to box origin
 		difference = (box.pos - point)
 		distance = difference.length()
@@ -282,23 +282,20 @@ def doFastGI(x, y, z, r, g, b, gc):
 		# Set box colour
 		box_colour = box.colour[facing_side]
 		
-		# Find the "radius" of the box
-		radius = [abs(difference.x), abs(difference.y), abs(difference.z)][facing_side]
+		# Find the "radius" of the box used to make sure box size is less likely
+		# to affect the amount of light cast
+		radius = [box.size.x, box.size.y, box.size.z][facing_side]
 		
 		# Find the new colour of the point based on how much light was added to
 		# the point and its intensity.
-		t = findIntenstity(radius, distance)
-		add_colour += (box_colour * t)
+		add_colour += box_colour * findIntenstity(radius, distance) * box.glow
 	
 	# Normalise colour with respect to box count so this can't go over 1.0 on
 	# each component
-	add_colour = add_colour * (1 / len(gc.boxes)) * 2.0 # NOTE: * 2.0 is for testing
+	add_colour = add_colour * (1 / len(gc.boxes))
 	
 	# Get the final colour by adding to base box colour
 	r, g, b = (old_colour.compose(FASTGI_LIGHT_AMBIENT) + add_colour.compose(Vector3(1.0, 1.0, 1.0) - FASTGI_LIGHT_AMBIENT)).asTuple()
-	# r, g, b = add_colour.asTuple()
-	
-	print(f"{add_colour}")
 	
 	return (r, g, b)
 
@@ -595,7 +592,7 @@ class Box:
 	Very simple container for box data
 	"""
 	
-	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = (1.0, 1.0, 1.0), tileRot = (0, 0, 0)):
+	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = (1.0, 1.0, 1.0), tileRot = (0, 0, 0), glow = 1):
 		"""
 		seg: global segment context
 		pos: position
@@ -604,6 +601,7 @@ class Box:
 		tile: list or tuple of tiles to use
 		tileSize: size of the box tiles
 		tileRot: rotation of the boxes
+		glow: Extension that enables this box as a sort of light, true by default
 		"""
 		
 		# Expand shorthands for vectors
@@ -621,6 +619,7 @@ class Box:
 		self.tile = tile
 		self.tileSize = tileSize
 		self.tileRot = tileRot
+		self.glow = glow
 	
 	def bakeGeometry(self):
 		"""
@@ -849,7 +848,11 @@ def parseXml(data, templates = {}):
 				# Tile rotation -- rot1 [rot2 rot3]
 				tileRot = parseIntTriplet(getFromTemplate(a, templates, t, "tileRot", "1"))
 				
-				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot))
+				# NOTE: This is an extension used for GI/glow effect
+				# Glow -- glow
+				glow = float(getFromTemplate(a, templates, t, "glow", "1"))
+				
+				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot, glow))
 	
 	return seg
 
