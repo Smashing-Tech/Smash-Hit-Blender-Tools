@@ -256,7 +256,7 @@ def doFastGI(x, y, z, r, g, b, gc):
 	"""
 	
 	# TODO: Make these globals
-	FASTGI_LIGHT_AMBIENT = Vector3(0.0, 0.0, 0.0)
+	FASTGI_LIGHT_AMBIENT = Vector3(0.72, 0.72, 0.72)
 	FASTGI_LIGHT_SPAN = 5
 	
 	# Find the intensity of light with box size r and distance from box d

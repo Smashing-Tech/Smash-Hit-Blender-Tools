@@ -142,6 +142,10 @@ def sh_add_object(level_root, scene, obj, params):
 	if (sh_type == "BOX" and obj.sh_properties.sh_reflective):
 		properties["reflection"] = "1"
 	
+	# Add glow property for boxes if not default
+	if (sh_type == "BOX" and obj.sh_properties.sh_glow != 1.0):
+		properties["glow"] = str(obj.sh_properties.sh_glow)
+	
 	# Add decal number if this is a decal
 	if (sh_type == "DEC"):
 		properties["tile"] = str(obj.sh_properties.sh_decal)
@@ -475,11 +479,11 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 		)
 	
 	bake_vertex_gi: EnumProperty(
-		name = "Global illumination",
-		description = "(Mesh mode only) Feature not complete, still in testing!!! ",
+		name = "Advanced lighting",
+		description = "(Mesh mode only) Enables more advanced lighting effects, weather or not seen in real life, such as boxes contributing light to other boxes",
 		items = [ 
-			('None', "None", "Does not apply global illumination"),
-			('Fast', "Fast", "NewColour = OldColour + (1 / (1 + rd)) * (BoxColour [COMPOSE] OldColour)   where r is avg box size and d is distance from box"),
+			('None', "None", "Does not apply additional effects"),
+			('Fast', "FastGI", "Finds an approximation for the amount of light that is contributed by boxes at each point and adds this to the light at the point"),
 		],
 		default = "None"
 		)
@@ -1020,10 +1024,6 @@ class sh_EntityProperties(PropertyGroup):
 		default = {'training', 'classic', 'expert', 'zen', 'versus', 'coop'},
 		)
 	
-	##################
-	# Mesh properties
-	##################
-	
 	sh_visible: BoolProperty(
 		name = "Visible",
 		description = "If the box will appear in the exported mesh",
@@ -1083,11 +1083,7 @@ class sh_EntityProperties(PropertyGroup):
 		min = 0.0,
 		max = 128.0,
 		size = 3
-	) 
-	
-	########################
-	# Back to normal things
-	########################
+	)
 	
 	sh_decal: IntProperty(
 		name = "Decal",
@@ -1102,10 +1098,6 @@ class sh_EntityProperties(PropertyGroup):
 		description = "If this box should show reflections",
 		default = False
 		)
-	
-	#############
-	# Paramaters
-	#############
 	
 	sh_param0: StringProperty(
 		name = "param0",
@@ -1191,10 +1183,6 @@ class sh_EntityProperties(PropertyGroup):
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
-	###############
-	# Other values
-	###############
-	
 	sh_havetint: BoolProperty(
 		name = "Add decal colourisation",
 		description = "Changes the tint (colourisation) of the decal",
@@ -1253,6 +1241,14 @@ class sh_EntityProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.0,
 		max = 1.0,
+	)
+	
+	sh_glow: FloatProperty(
+		name = "Glow",
+		description = "The intensity of the light that this box will contribtue to the scene when FastGI is enabled (this can also be used to create lights)",
+		default = 1.0,
+		min = 0.0,
+		max = 5.0,
 	)
 	
 	sh_size: FloatVectorProperty(
@@ -1336,6 +1332,7 @@ class sh_ObstaclePanel(Panel):
 		if (sh_properties.sh_type == "BOX"):
 			layout.prop(sh_properties, "sh_reflective")
 			layout.prop(sh_properties, "sh_visible")
+			layout.prop(sh_properties, "sh_glow")
 			
 			if (sh_properties.sh_visible):
 				sub = layout.box()
