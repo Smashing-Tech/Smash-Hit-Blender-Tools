@@ -10,7 +10,7 @@ h1, h2, h3, h4, p, li {
 	margin-bottom: 0.5em;
 }
 
-h1 { font-size: 42pt; color: #068367; text-align: center; }
+h1 { font-size: 42pt; color: #068367; text-align: center; margin: 0.75em; }
 h2 { font-size: 28pt; color: #068367; text-align: center; }
 h3 { font-size: 22pt; }
 h4 { font-size: 18pt; }
@@ -55,10 +55,11 @@ body {
 
 .main-section {
 	border: none;
-	background: #e4f0f4d0;
-	max-width: 60em;
+	box-shadow: 0 0.0em 1.2em #0007;
+	background: #fff;
+	color: #1e1e1e;
+	max-width: 65em;
 	margin: auto;
-	margin-top: 0;
 	padding: 1em;
 	border-radius: 0.25em;
 }
@@ -85,14 +86,17 @@ body {
 }
 
 .navbar-section {
-	background: #068367;
+	background: #eaeaea;
 	border: none;
 	border-radius: 0.325em;
-	color: #fff;
 	padding: 1em;
-	margin: auto;
-	margin-top: 2em;
-	max-width: 60em;
+}
+
+.bottom-section {
+	background: #eaeaea;
+	border: none;
+	border-radius: 0.325em;
+	padding: 1em;
 }
 
 .cb-top-item {
@@ -109,22 +113,6 @@ body {
 	display: inline-block;
 	vertical-align: middle;
 	font-family: "Maven Pro", sans-serif;
-}
-
-.bottom-section {
-	background: #068367;
-	border-radius: 0.25em;
-	text-align: center;
-	padding: 1em;
-	color: #fff;
-	margin: auto;
-	margin-top: 0;
-	margin-bottom: 2em;
-	max-width: 60em;
-}
-
-.bottom-section p, .notice-section p {
-	margin: 0;
 }
 
 .nc-top {
@@ -165,14 +153,15 @@ body {
 
 .carambola-download {
 	float: right;
-	max-width: 40%;
+	max-width: 20em;
 	padding: 0.75em;
 }
 
 .carambola-download-box {
 	padding: 1em;
-	border-radius: 0.2em;
+	border-radius: 0.325em;
 	background: #068367;
+	box-shadow: 0 0.2em 0.4em #0000003f;
 	color: #fff;
 	cursor: pointer;
 	overflow: auto;
@@ -195,3 +184,6 @@ body {
 	padding-left: 0.4em;
 }
 
+.small-text {
+	font-size: 10pt;
+}
