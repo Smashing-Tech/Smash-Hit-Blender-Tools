@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 2)
+VERSION = (0, 13, 3)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -693,8 +693,10 @@ class Box:
 		
 		return None
 
-def writeMeshBinary(data, path, seg = None):
-	f = open(path, "wb")
+def generateMeshData(data, seg = None):
+	"""
+	Generates mesh data bytes
+	"""
 	
 	# Vertex and index data arrays
 	vertex = bytearray()
@@ -726,8 +728,7 @@ def writeMeshBinary(data, path, seg = None):
 	
 	outdata = zlib.compress(outdata, -1)
 	
-	f.write(outdata)
-	f.close()
+	return outdata
 
 def getFromTemplate(boxattr, template_list, template, attr, default):
 	"""
@@ -806,9 +807,9 @@ def parseTemplatesXml(path):
 	
 	return result
 
-def bakeMesh(data, path, templates_path = None):
+def bakeMesh(data, templates_path = None):
 	"""
-	Bake a mesh from Smash Hit segment data
+	Bake a mesh from Smash Hit segment and return data
 	"""
 	
 	seg = parseXml(data, parseTemplatesXml(templates_path) if templates_path else {})
@@ -819,14 +820,21 @@ def bakeMesh(data, path, templates_path = None):
 	for box in boxes:
 		meshData += box.bakeGeometry()
 	
-	writeMeshBinary(meshData, path, seg)
+	return generateMeshData(meshData, seg)
+
+def bakeMeshToFile(data, output_file, template_file = None):
+	mesh_data = bakeMesh(data, template_file)
+	
+	f = open(output_file, "wb")
+	f.write(mesh_data)
+	f.close()
 
 def main(input_file, output_file, template_file = None):
 	f = open(input_file, "r")
 	data = f.read()
 	f.close()
 	
-	bakeMesh(data, output_file, template_file)
+	bakeMeshToFile(data, output_file, template_file)
 
 if (__name__ == "__main__"):
 	main(sys.argv[1], sys.argv[2], sys.argv[3] if (len(sys.argv) >= 4) else None)

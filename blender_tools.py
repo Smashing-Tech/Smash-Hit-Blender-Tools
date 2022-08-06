@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 0),
+	"version": (2, 0, 1),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -28,9 +28,14 @@ import tempfile
 import importlib.util as imut
 import bake_mesh
 import obstacle_db
+import server
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
+
+# The name of the test server. If set to false initially, the test server will
+# be disabled.
+g_process_test_server = True
 
 ## Segment Export
 ## All of the following is related to exporting segments.
@@ -43,8 +48,10 @@ def sh_create_root(scene, params):
 	size = {"X": scene.sh_len[0], "Y": scene.sh_len[1], "Z": scene.sh_len[2]}
 	
 	# VR Multiply setting
-	if (params["sh_vrmultiply"] != 1.0):
-		size["Z"] = size["Z"] * params["sh_vrmultiply"]
+	sh_vrmultiply = params.get("sh_vrmultiply", 1.0)
+	
+	if (sh_vrmultiply != 1.0):
+		size["Z"] = size["Z"] * sh_vrmultiply
 	
 	# Initial segment properties, like size
 	seg_props = {
@@ -82,8 +89,10 @@ def sh_add_object(level_root, scene, obj, params):
 	position = {"X": obj.location[1], "Y": obj.location[2], "Z": obj.location[0]}
 	
 	# VR Multiply setting
-	if (params["sh_vrmultiply"] > 1.05):
-		position["Z"] = position["Z"] * params["sh_vrmultiply"]
+	sh_vrmultiply = params.get("sh_vrmultiply", 1.0)
+	
+	if (sh_vrmultiply != 1.0):
+		position["Z"] = position["Z"] * sh_vrmultiply
 	
 	# The only gaurrented to exsist is pos
 	properties = {
@@ -113,8 +122,8 @@ def sh_add_object(level_root, scene, obj, params):
 		size = {"X": obj.dimensions[1] / 2, "Y": obj.dimensions[2] / 2, "Z": obj.dimensions[0] / 2}
 		
 		# VR Multiply setting
-		if (params["sh_vrmultiply"] > 1.05 and (abs(size["Z"]) > 2.0)):
-			size["Z"] = size["Z"] * params["sh_vrmultiply"]
+		if (sh_vrmultiply != 1.0 and (abs(size["Z"]) > 2.0)):
+			size["Z"] = size["Z"] * sh_vrmultiply
 		
 		properties["size"] = str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	
@@ -218,7 +227,7 @@ def sh_add_object(level_root, scene, obj, params):
 	if (params["isLast"]): # Fixes the issues with the last line of the file
 		el.tail = "\n"
 	
-	if (params["sh_box_bake_mode"] == "StoneHack" and sh_type == "BOX" and obj.sh_properties.sh_visible):
+	if (params.get("sh_box_bake_mode", "Mesh") == "StoneHack" and sh_type == "BOX" and obj.sh_properties.sh_visible):
 		"""
 		Export a fake obstacle that will represent stone in the level.
 		"""
@@ -229,11 +238,11 @@ def sh_add_object(level_root, scene, obj, params):
 		position = {"X": obj.location[1], "Y": obj.location[2], "Z": obj.location[0]}
 		
 		# VR Multiply setting
-		if (params["sh_vrmultiply"] > 1.05):
-			position["Z"] = position["Z"] * params["sh_vrmultiply"]
+		if (sh_vrmultiply != 1.0):
+			position["Z"] = position["Z"] * sh_vrmultiply
 		
-		if (params["sh_vrmultiply"] > 1.05 and ((scene.sh_len[2] / 2) - 0.5) < abs(size["Z"])):
-			size["Z"] = size["Z"] * params["sh_vrmultiply"]
+		if (sh_vrmultiply != 1.0 and ((scene.sh_len[2] / 2) - 0.5) < abs(size["Z"])):
+			size["Z"] = size["Z"] * sh_vrmultiply
 		
 		properties = {
 			"pos": str(position["X"]) + " " + str(position["Y"]) + " " + str(position["Z"]),
@@ -255,7 +264,7 @@ def sh_add_object(level_root, scene, obj, params):
 		if (params["isLast"]):
 			el_stone.tail = "\n"
 
-def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
+def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
 	"""
@@ -280,36 +289,55 @@ def sh_export_segment(fp, context, *, compress = False, params = {"sh_vrmultiply
 		
 		sh_add_object(level_root, scene, obj, params)
 	
+	file_header = "<!-- Exporter: Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
+	content = file_header + et.tostring(level_root, encoding = "unicode")
+	
+	# TODO: The function should probably be split at this point
+	
+	##
+	## Handle test server mode
+	##
+	
+	if (params.get("sh_test_server", False) == True):
+		# Make dirs
+		os.makedirs(tempfile.gettempdir() + "/shbt-testserver", exist_ok = True)
+		
+		# Write mesh
+		bake_mesh.bakeMeshToFile(content, tempfile.gettempdir() + "/shbt-testserver/segment.mesh", params.get("sh_meshbake_template", None))
+		
+		# Write XML
+		with open(tempfile.gettempdir() + "/shbt-testserver/segment.xml", "w") as f:
+			f.write(content)
+		
+		return {'FINISHED'}
+	
 	##
 	## Write the file
 	##
 	
-	file_header = "<!-- Exporter: Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
-	content = file_header + et.tostring(level_root, encoding = "unicode")
-	
 	# Cook the mesh if we need to
-	meshfile = ospath.splitext(ospath.splitext(fp)[0])[0]
+	meshfile = ospath.splitext(ospath.splitext(filepath)[0])[0]
 	if (compress):
 		meshfile = ospath.splitext(meshfile)[0]
 	meshfile += ".mesh.mp3"
 	
-	if (params["sh_box_bake_mode"] == "Mesh"):
-		bake_mesh.TILE_COLS = params["bake_tile_texture_count"][0]
-		bake_mesh.TILE_ROWS = params["bake_tile_texture_count"][1]
-		bake_mesh.TILE_BITE_COL = params["bake_tile_texture_cutoff"][0]
-		bake_mesh.TILE_BITE_ROW = params["bake_tile_texture_cutoff"][1]
+	if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
+		bake_mesh.TILE_COLS = params.get("bake_tile_texture_count", [8, 8])[0]
+		bake_mesh.TILE_ROWS = params.get("bake_tile_texture_count", [8, 8])[1]
+		bake_mesh.TILE_BITE_COL = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[0]
+		bake_mesh.TILE_BITE_ROW = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[1]
 		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
 		bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
 		bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
-		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", False)
-		bake_mesh.bakeMesh(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
+		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
+		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	
 	# Write out file
 	if (not compress):
-		with open(fp, "w") as f:
+		with open(filepath, "w") as f:
 			f.write(content)
 	else:
-		with gzip.open(fp, "wb") as f:
+		with gzip.open(filepath, "wb") as f:
 			f.write(content.encode())
 	
 	context.window.cursor_set('DEFAULT')
@@ -542,6 +570,24 @@ class sh_export_gz(sh_ExportCommon):
 
 def sh_draw_export_gz(self, context):
 	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
+
+class sh_export_test(Operator):
+	"""
+	Compressed segment export
+	"""
+	
+	bl_idname = "sh.export_test_server"
+	bl_label = "Export Segment to Test Server"
+	
+	def execute(self, context):
+		return sh_export_segment(
+			None,
+			context,
+			params = {"sh_test_server": True, "sh_meshbake_template": tryTemplatesPath()}
+		)
+
+def sh_draw_export_test(self, context):
+	self.layout.operator("sh.export_test_server", text="Smash Hit Quick Test Server")
 
 ## IMPORT
 ## The following things are related to the importer, which is not complete.
@@ -1410,12 +1456,14 @@ classes = (
 	sh_ObstaclePanel,
 	sh_export,
 	sh_export_gz,
+	sh_export_test,
 	sh_import,
 	sh_import_gz,
 )
 
 def register():
 	from bpy.utils import register_class
+	
 	for cls in classes:
 		register_class(cls)
 	
@@ -1425,13 +1473,28 @@ def register():
 	# Add the export operator to menu
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_gz)
+	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_test)
 	
 	# Add import operators to menu
 	bpy.types.TOPBAR_MT_file_import.append(sh_draw_import)
 	bpy.types.TOPBAR_MT_file_import.append(sh_draw_import_gz)
+	
+	# Start server
+	global g_process_test_server
+	
+	if (g_process_test_server):
+		g_process_test_server = server.runServerProcess()
 
 def unregister():
 	from bpy.utils import unregister_class
+	
 	for cls in reversed(classes):
 		unregister_class(cls)
+	
 	del bpy.types.Scene.sh_properties
+	
+	# Shutdown server
+	global g_process_test_server
+	
+	if (g_process_test_server):
+		g_process_test_server.terminate()
