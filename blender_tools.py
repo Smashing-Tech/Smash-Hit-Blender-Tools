@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 1),
+	"version": (2, 0, 3),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -312,16 +312,21 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 	# TODO: Split into function exportSegmentTest
 	if (params.get("sh_test_server", False) == True):
 		# Make dirs
-		os.makedirs(tempfile.gettempdir() + "/shbt-testserver", exist_ok = True)
+		tempdir = tempfile.gettempdir() + "/shbt-testserver"
+		os.makedirs(tempdir, exist_ok = True)
+		
+		# Delete old mesh file
+		if (ospath.exists(tempdir + "/segment.mesh")):
+			os.remove(tempdir + "/segment.mesh")
 		
 		# Write mesh if needed
 		if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
 			bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
-			bake_mesh.bakeMeshToFile(content, tempfile.gettempdir() + "/shbt-testserver/segment.mesh", params.get("sh_meshbake_template", None))
+			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None))
 		
 		# Write XML
-		with open(tempfile.gettempdir() + "/shbt-testserver/segment.xml", "w") as f:
+		with open(tempdir + "/segment.xml", "w") as f:
 			f.write(content)
 		
 		return {'FINISHED'}
@@ -1312,7 +1317,7 @@ class sh_EntityProperties(PropertyGroup):
 	)
 
 class sh_SegmentPanel(Panel):
-	bl_label = "Segment Properties"
+	bl_label = "Smash Hit"
 	bl_idname = "OBJECT_PT_segment_panel"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "UI"
@@ -1348,7 +1353,7 @@ class sh_SegmentPanel(Panel):
 		layout.separator()
 
 class sh_ObstaclePanel(Panel):
-	bl_label = "Object Properties"
+	bl_label = "Smash Hit"
 	bl_idname = "OBJECT_PT_obstacle_panel"
 	bl_space_type = "VIEW_3D"   
 	bl_region_type = "UI"
