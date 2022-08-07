@@ -120,14 +120,15 @@ def runServer():
 	"""
 	Run the server
 	"""
+	
 	server = HTTPServer(("0.0.0.0", 8000), AdServer)
 	
-	print("Server running!")
+	print("Smash Hit Tools: Server running!")
 	
 	try:
 		server.serve_forever()
 	except Exception as e:
-		print("Test server down:\n\n", e)
+		print("Smash Hit Tools: Test server is down:\n\n", e)
 	
 	server.server_close()
 

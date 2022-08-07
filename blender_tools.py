@@ -264,17 +264,16 @@ def sh_add_object(level_root, scene, obj, params):
 		if (params["isLast"]):
 			el_stone.tail = "\n"
 
-def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
+def createSegmentText(context, params):
 	"""
-	This function exports the blender scene to a Smash Hit compatible XML file.
+	Export the XML part of a segment to a string
 	"""
-	
-	context.window.cursor_set('WAIT')
 	
 	scene = context.scene.sh_properties
 	b_scene = context.scene
 	level_root = sh_create_root(scene, params)
 	
+	# Export each object to XML node
 	for i in range(len(bpy.data.objects)):
 		obj = bpy.data.objects[i]
 		
@@ -283,27 +282,43 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		
 		params["isLast"] = False
 		
-		# NOTE: This hack doesn't work if the last object isn't visible.
+		# HACK: This hack doesn't work if the last object isn't visible.
 		if (i == (len(bpy.data.objects) - 1)):
 			params["isLast"] = True
 		
 		sh_add_object(level_root, scene, obj, params)
 	
+	# Add file header with version
 	file_header = "<!-- Exporter: Smash Hit Tools v" + str(bl_info["version"][0]) + "." + str(bl_info["version"][1]) + "." + str(bl_info["version"][2]) + " -->\n"
+	
+	# Get final string
 	content = file_header + et.tostring(level_root, encoding = "unicode")
 	
-	# TODO: The function should probably be split at this point
+	return content
+
+def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
+	"""
+	This function exports the blender scene to a Smash Hit compatible XML file.
+	"""
+	
+	context.window.cursor_set('WAIT')
+	
+	content = createSegmentText(context, params)
 	
 	##
 	## Handle test server mode
 	##
 	
+	# TODO: Split into function exportSegmentTest
 	if (params.get("sh_test_server", False) == True):
 		# Make dirs
 		os.makedirs(tempfile.gettempdir() + "/shbt-testserver", exist_ok = True)
 		
-		# Write mesh
-		bake_mesh.bakeMeshToFile(content, tempfile.gettempdir() + "/shbt-testserver/segment.mesh", params.get("sh_meshbake_template", None))
+		# Write mesh if needed
+		if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
+			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
+			bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
+			bake_mesh.bakeMeshToFile(content, tempfile.gettempdir() + "/shbt-testserver/segment.mesh", params.get("sh_meshbake_template", None))
 		
 		# Write XML
 		with open(tempfile.gettempdir() + "/shbt-testserver/segment.xml", "w") as f:
@@ -315,21 +330,26 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 	## Write the file
 	##
 	
-	# Cook the mesh if we need to
-	meshfile = ospath.splitext(ospath.splitext(filepath)[0])[0]
-	if (compress):
-		meshfile = ospath.splitext(meshfile)[0]
-	meshfile += ".mesh.mp3"
+	# TODO: Split into function exportSegmentNormal
 	
+	# Cook the mesh if we need to
 	if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
-		bake_mesh.TILE_COLS = params.get("bake_tile_texture_count", [8, 8])[0]
-		bake_mesh.TILE_ROWS = params.get("bake_tile_texture_count", [8, 8])[1]
-		bake_mesh.TILE_BITE_COL = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[0]
-		bake_mesh.TILE_BITE_ROW = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[1]
-		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_unseen_sides", False)
-		bake_mesh.BAKE_IGNORE_TILESIZE = params.get("bake_ignore_tilesize", False)
-		bake_mesh.PARTY_MODE = params.get("bake_partymode", False)
+		# Find file name
+		meshfile = ospath.splitext(ospath.splitext(filepath)[0])[0]
+		if (compress):
+			meshfile = ospath.splitext(meshfile)[0]
+		meshfile += ".mesh.mp3"
+		
+		# Set properties
+		# (TODO: maybe this should be passed to the function instead of just setting global vars?)
+		#bake_mesh.TILE_COLS = params.get("bake_tile_texture_count", [8, 8])[0]
+		#bake_mesh.TILE_ROWS = params.get("bake_tile_texture_count", [8, 8])[1]
+		#bake_mesh.TILE_BITE_COL = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[0]
+		#bake_mesh.TILE_BITE_ROW = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[1]
+		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
 		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
+		
+		# Bake mesh
 		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
 	
 	# Write out file
@@ -341,6 +361,7 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 			f.write(content.encode())
 	
 	context.window.cursor_set('DEFAULT')
+	
 	return {"FINISHED"}
 
 ## UI-related classes
@@ -438,28 +459,9 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 		if (not self.sh_meshbake_template):
 			self.sh_meshbake_template = tryTemplatesPath()
 	
-	sh_vrmultiply: FloatProperty(
-		name = "Segment strech",
-		description = "This option tries to strech the segment's depth to make more time between obstacles. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment",
-		default = 1.0,
-		min = 0.75,
-		max = 4.0,
-		)
-	
-	sh_box_bake_mode: EnumProperty(
-		name = "Box bake mode",
-		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
-		items = [ 
-			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
-			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
-			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
-		],
-		default = "Mesh"
-		)
-	
 	sh_meshbake_template: StringProperty(
 		name = "Template",
-		description = "(Mesh mode only) A relitive or full path to the template file used for baking meshes. If you use APK Editor Studio on Windows or Linux and the Smash Hit APK is open, the path to the file will be pre-filled",
+		description = "A relitive or full path to the template file used for baking meshes. If you use APK Editor Studio on Windows or Linux and the Smash Hit APK is open, the path to the file will be pre-filled",
 		default = "",
 		subtype = "FILE_PATH",
 		maxlen = SH_MAX_STR_LEN,
@@ -467,7 +469,7 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	
 	bake_tile_texture_count: IntVectorProperty(
 		name = "Tile count",
-		description = "(Mesh mode only) The number of tiles in tiles.png.mtx in (columns, rows) format",
+		description = "[DOES NOT WORK] The number of tiles in tiles.png.mtx in (columns, rows) format",
 		size = 2,
 		default = (8, 8),
 		min = 1,
@@ -476,35 +478,11 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	
 	bake_tile_texture_cutoff: FloatVectorProperty(
 		name = "Tile crop",
-		description = "(Mesh mode only) The region around the tile texture that will be cut off",
+		description = "[DOES NOT WORK] The region around the tile texture that will be cut off",
 		size = 2,
 		default = (0.03125, 0.03125),
 		min = 0.0,
 		max = 0.0625,
-		)
-	
-	bake_unseen_faces: BoolProperty(
-		name = "Bake unseen faces",
-		description = "(Mesh mode only) Bakes faces that cannot be seen by the player. This is only needed for main menu segments where these faces can actually be seen",
-		default = False
-		)
-	
-	bake_ignore_tilesize: BoolProperty(
-		name = "Ignore tile size",
-		description = "(Mesh mode only) Ignores the non-faithful interpretation of the tileSize argument in MeshBake and only allows for tileSize to have one or three numbers",
-		default = False
-		)
-	
-	bake_vertex_light: BoolProperty(
-		name = "Per-vertex lighting",
-		description = "(Mesh mode only) Enables per-vertex lighting",
-		default = True
-		)
-	
-	bake_partymode: BoolProperty(
-		name = "Party mode",
-		description = "(Mesh mode only) Try it :o)",
-		default = False
 		)
 
 class sh_export(sh_ExportCommon):
@@ -518,22 +496,23 @@ class sh_export(sh_ExportCommon):
 	filter_glob = bpy.props.StringProperty(default='*.xml.mp3', options={'HIDDEN'}, maxlen=255)
 	
 	def execute(self, context):
-		return sh_export_segment(
+		sh_properties = context.scene.sh_properties
+		
+		result = sh_export_segment(
 			self.filepath,
 			context,
 			params = {
-				"sh_vrmultiply": self.sh_vrmultiply,
-				"sh_box_bake_mode": self.sh_box_bake_mode,
+				"sh_vrmultiply": sh_properties.sh_vrmultiply,
+				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
 				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
-				"bake_back_faces": self.bake_unseen_faces,
-				"bake_unseen_sides": self.bake_unseen_faces,
-				"bake_ignore_tilesize": self.bake_ignore_tilesize,
-				"bake_vertex_light": self.bake_vertex_light,
-				"bake_partymode": self.bake_partymode,
+				"bake_menu_segment": sh_properties.sh_menu_segment,
+				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
 			}
 		)
+		
+		return result
 
 def sh_draw_export(self, context):
 	self.layout.operator("sh.export", text="Segment (.xml.mp3)")
@@ -550,23 +529,24 @@ class sh_export_gz(sh_ExportCommon):
 	filter_glob = bpy.props.StringProperty(default='*.xml.gz.mp3', options={'HIDDEN'}, maxlen=255)
 	
 	def execute(self, context):
-		return sh_export_segment(
+		sh_properties = context.scene.sh_properties
+		
+		result = sh_export_segment(
 			self.filepath,
 			context,
-			compress = True, 
+			compress = True,
 			params = {
-				"sh_vrmultiply": self.sh_vrmultiply,
-				"sh_box_bake_mode": self.sh_box_bake_mode,
+				"sh_vrmultiply": sh_properties.sh_vrmultiply,
+				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"bake_tile_texture_count": self.bake_tile_texture_count,
 				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
-				"bake_back_faces": self.bake_unseen_faces,
-				"bake_unseen_sides": self.bake_unseen_faces,
-				"bake_ignore_tilesize": self.bake_ignore_tilesize,
-				"bake_vertex_light": self.bake_vertex_light,
-				"bake_partymode": self.bake_partymode,
+				"bake_menu_segment": sh_properties.sh_menu_segment,
+				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
 			}
 		)
+		
+		return result
 
 def sh_draw_export_gz(self, context):
 	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
@@ -580,11 +560,22 @@ class sh_export_test(Operator):
 	bl_label = "Export Segment to Test Server"
 	
 	def execute(self, context):
-		return sh_export_segment(
+		sh_properties = context.scene.sh_properties
+		
+		result = sh_export_segment(
 			None,
 			context,
-			params = {"sh_test_server": True, "sh_meshbake_template": tryTemplatesPath()}
+			params = {
+				"sh_vrmultiply": sh_properties.sh_vrmultiply,
+				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
+				"bake_menu_segment": sh_properties.sh_menu_segment,
+				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"sh_test_server": True,
+				"sh_meshbake_template": tryTemplatesPath()
+			}
 		)
+		
+		return result
 
 def sh_draw_export_test(self, context):
 	self.layout.operator("sh.export_test_server", text="Smash Hit Quick Test Server")
@@ -891,6 +882,17 @@ class sh_SceneProperties(PropertyGroup):
 		max = 750.0,
 	) 
 	
+	sh_box_bake_mode: EnumProperty(
+		name = "Box bake mode",
+		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
+		items = [ 
+			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
+			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
+			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
+		],
+		default = "Mesh"
+		)
+	
 	sh_template: StringProperty(
 		name = "Template",
 		description = "The template paramater that is passed for the entire segment",
@@ -906,12 +908,12 @@ class sh_SceneProperties(PropertyGroup):
 		max = 1.0
 		)
 	
-	sh_softshadow: FloatProperty(
-		name = "Soft shadow",
-		description = "Opacity of soft shadow on dynamic objects",
-		default = -0.001,
-		min = -0.001,
-		max = 1.0
+	sh_vrmultiply: FloatProperty(
+		name = "Segment strech",
+		description = "This option tries to strech the segment's depth to make more time between obstacles. The intent is to allow it to be played in Smash Hit VR easier and without modifications to the segment",
+		default = 1.0,
+		min = 0.75,
+		max = 4.0,
 		)
 	
 	sh_light_left: FloatProperty(
@@ -960,6 +962,18 @@ class sh_SceneProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.0,
 		max = 1.0,
+		)
+	
+	sh_menu_segment: BoolProperty(
+		name = "Menu segment mode",
+		description = "Treats the segment like it will appear on the main menu. Bakes faces that cannot be seen by the player",
+		default = False
+		)
+	
+	sh_ambient_occlusion: BoolProperty(
+		name = "Ambient occlusion",
+		description = "Enables ambient occlusion (per-vertex lighting)",
+		default = True
 		)
 
 # Object (box/obstacle/powerup/decal/water) properties
@@ -1302,11 +1316,11 @@ class sh_SegmentPanel(Panel):
 	bl_idname = "OBJECT_PT_segment_panel"
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "UI"
-	bl_category = "Smash Hit"
+	bl_category = "Scene"
 	
 	@classmethod
 	def poll(self, context):
-		return context.object is not None
+		return True
 	
 	def draw(self, context):
 		layout = self.layout
@@ -1314,17 +1328,22 @@ class sh_SegmentPanel(Panel):
 		sh_properties = scene.sh_properties
 		
 		layout.prop(sh_properties, "sh_len")
+		layout.prop(sh_properties, "sh_box_bake_mode")
 		layout.prop(sh_properties, "sh_template")
+		layout.prop(sh_properties, "sh_softshadow")
+		layout.prop(sh_properties, "sh_vrmultiply")
 		
 		sub = layout.box()
 		sub.label(text = "Light", icon = "LIGHT")
-		sub.prop(sh_properties, "sh_softshadow")
 		sub.prop(sh_properties, "sh_light_right")
 		sub.prop(sh_properties, "sh_light_left")
 		sub.prop(sh_properties, "sh_light_top")
 		sub.prop(sh_properties, "sh_light_bottom")
 		sub.prop(sh_properties, "sh_light_front")
 		sub.prop(sh_properties, "sh_light_back")
+		
+		layout.prop(sh_properties, "sh_menu_segment")
+		layout.prop(sh_properties, "sh_ambient_occlusion")
 		
 		layout.separator()
 
@@ -1333,7 +1352,7 @@ class sh_ObstaclePanel(Panel):
 	bl_idname = "OBJECT_PT_obstacle_panel"
 	bl_space_type = "VIEW_3D"   
 	bl_region_type = "UI"
-	bl_category = "Smash Hit"
+	bl_category = "Item"
 	bl_context = "objectmode"
 	
 	@classmethod

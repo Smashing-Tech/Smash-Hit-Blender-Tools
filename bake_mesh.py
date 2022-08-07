@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 3)
+VERSION = (0, 13, 4)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -31,13 +31,6 @@ TILE_BITE_COL = 0.03125
 # Disable or enable baking unseen and back faces. Note that unseen faces does
 # includes back faces, so both must be enabled for those.
 BAKE_UNSEEN_FACES = False
-
-# Ignore the tileSize attribute, defaulting to the single unit tile, which can
-# be misinterprted on some segments.
-BAKE_IGNORE_TILESIZE = False
-
-# Randomises colours of quads for debugging purposes.
-PARTY_MODE = False
 
 # Enable vertex lighting using delta boxes
 VERTEX_LIGHT_ENABLED = True
@@ -356,7 +349,7 @@ class Quad:
 		self.p2 = p2
 		self.p3 = p3
 		self.p4 = p4
-		self.colour = colour if not PARTY_MODE else Vector3.random()
+		self.colour = colour
 		self.tile = tile
 		self.tileRot = tileRot
 		self.seg = seg
