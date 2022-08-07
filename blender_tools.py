@@ -24,6 +24,7 @@ import gzip
 import json
 import os
 import os.path as ospath
+import pathlib
 import tempfile
 import importlib.util as imut
 import bake_mesh
@@ -347,10 +348,6 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		
 		# Set properties
 		# (TODO: maybe this should be passed to the function instead of just setting global vars?)
-		#bake_mesh.TILE_COLS = params.get("bake_tile_texture_count", [8, 8])[0]
-		#bake_mesh.TILE_ROWS = params.get("bake_tile_texture_count", [8, 8])[1]
-		#bake_mesh.TILE_BITE_COL = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[0]
-		#bake_mesh.TILE_BITE_ROW = params.get("bake_tile_texture_cutoff", [0.03125, 0.03125])[1]
 		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
 		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
 		
@@ -424,6 +421,11 @@ def tryTemplatesPath():
 	
 	try:
 		print("Smash Hit Tools: Auto find templates invoked.")
+		print("Smash Hit Tools: Trying to find templates from APK Editor Studio")
+		
+		##
+		## Templates from APK Editor Studio
+		##
 		
 		# Get the search path
 		search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
@@ -444,6 +446,15 @@ def tryTemplatesPath():
 			if ospath.exists(cand):
 				path = cand
 				break
+		
+		##
+		## Templates file from home directory
+		##
+		
+		homedir_templates = str(pathlib.Path.home()) + "/smash-hit-templates.xml"
+		
+		if (not path and ospath.exists(homedir_templates)):
+			path = homedir_templates
 		
 		print(f"Smash Hit Tools: Got file: \"{path}\"")
 		
@@ -466,28 +477,10 @@ class sh_ExportCommon(bpy.types.Operator, ExportHelper2):
 	
 	sh_meshbake_template: StringProperty(
 		name = "Template",
-		description = "A relitive or full path to the template file used for baking meshes. If you use APK Editor Studio on Windows or Linux and the Smash Hit APK is open, the path to the file will be pre-filled",
+		description = "A relitive or full path to the template file used for baking meshes. If you use APK Editor Studio and the Smash Hit APK is open, the path to the file will be pre-filled",
 		default = "",
 		subtype = "FILE_PATH",
 		maxlen = SH_MAX_STR_LEN,
-		)
-	
-	bake_tile_texture_count: IntVectorProperty(
-		name = "Tile count",
-		description = "[DOES NOT WORK] The number of tiles in tiles.png.mtx in (columns, rows) format",
-		size = 2,
-		default = (8, 8),
-		min = 1,
-		max = 32,
-		)
-	
-	bake_tile_texture_cutoff: FloatVectorProperty(
-		name = "Tile crop",
-		description = "[DOES NOT WORK] The region around the tile texture that will be cut off",
-		size = 2,
-		default = (0.03125, 0.03125),
-		min = 0.0,
-		max = 0.0625,
 		)
 
 class sh_export(sh_ExportCommon):
@@ -507,11 +500,9 @@ class sh_export(sh_ExportCommon):
 			self.filepath,
 			context,
 			params = {
+				"sh_meshbake_template": self.sh_meshbake_template,
 				"sh_vrmultiply": sh_properties.sh_vrmultiply,
 				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
-				"sh_meshbake_template": self.sh_meshbake_template,
-				"bake_tile_texture_count": self.bake_tile_texture_count,
-				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
 			}
@@ -544,8 +535,6 @@ class sh_export_gz(sh_ExportCommon):
 				"sh_vrmultiply": sh_properties.sh_vrmultiply,
 				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
 				"sh_meshbake_template": self.sh_meshbake_template,
-				"bake_tile_texture_count": self.bake_tile_texture_count,
-				"bake_tile_texture_cutoff": self.bake_tile_texture_cutoff,
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
 			}
