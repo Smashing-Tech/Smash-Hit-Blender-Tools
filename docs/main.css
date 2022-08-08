@@ -1,26 +1,40 @@
 /* Carambola Website CSS */
-@import url('https://fonts.googleapis.com/css2?family=Maven+Pro:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
 
 /* Remove default padding */
-* { margin: 0; padding: 0; }
+* {
+	margin: 0;
+	padding: 0;
+	--main-colour: #0eb2ff;
+}
 
 h1, h2, h3, h4, p, li {
-	font-family: "Maven Pro", sans-serif;
+	font-family: "PT Sans", sans-serif;
 	margin-top: 0.15em;
 	margin-bottom: 0.5em;
 }
 
-h1 { font-size: 42pt; color: #068367; text-align: center; margin: 0.75em; }
-h2 { font-size: 28pt; color: #068367; text-align: center; }
+h1 { font-size: 42pt; color: var(--main-colour); text-align: center; margin: 0.75em; }
+h2 { font-size: 28pt; color: var(--main-colour); text-align: center; }
 h3 { font-size: 22pt; }
 h4 { font-size: 18pt; }
 p, ul { font-size: 15pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
 .cb-quote { font-size: 20pt; line-height: 1.5; }
 
+.feature {
+	font-size: 19pt;
+	text-align: center;
+}
+
+.billboard {
+	border-radius: 0.425em;
+	box-shadow: 0 0.2em 0.4em #0000003f;
+}
+
 @media (prefers-color-scheme: dark) {
 	h1, h2 {
-		color: #09c398;
+		color: var(--main-colour);
 	}
 }
 
@@ -36,7 +50,7 @@ a:hover {
 }
 
 ::selection {
-	background: #068367;
+	background: var(--main-colour);
 	color: #fff;
 }
 
@@ -65,13 +79,13 @@ body {
 }
 
 .main-section a {
-	color: #068367;
+	color: var(--main-colour);
 	text-decoration-line: none;
 	border-radius: 0.2em;
 }
 
 .main-section a:hover {
-	background: #0683673a;
+	background: var(--main-colour)3a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -81,22 +95,37 @@ body {
 	}
 	
 	.main-section a {
-		color: #09c398;
+		color: var(--main-colour);
 	}
 }
 
 .navbar-section {
-	background: #eaeaea;
+	-webkit-backdrop-filter: blur(0.5em);
+	backdrop-filter: blur(0.5em);
+	background: #eaeaead0;
 	border: none;
 	border-radius: 0.325em;
+	box-shadow: 0 0.2em 0.4em #0000003f;
 	padding: 1em;
+	position: fixed;
+	width: 63em;
+}
+
+.post-navbar-padding {
+	padding-top: 1em;
 }
 
 .bottom-section {
-	background: #eaeaea;
-	border: none;
+	background: #8883;
 	border-radius: 0.325em;
-	padding: 1em;
+	padding: 0.5em;
+}
+
+@media (prefers-color-scheme: dark) {
+	.navbar-section {
+		background: #555d;
+		color: #fff;
+	}
 }
 
 .cb-top-item {
@@ -104,7 +133,7 @@ body {
 	font-size: 14pt;
 	display: inline-block;
 	vertical-align: middle;
-	font-family: "Maven Pro", sans-serif;
+	font-family: "PT Sans", sans-serif;
 }
 
 .cb-logo-item {
@@ -112,7 +141,7 @@ body {
 	font-size: 18pt;
 	display: inline-block;
 	vertical-align: middle;
-	font-family: "Maven Pro", sans-serif;
+	font-family: "PT Sans", sans-serif;
 }
 
 .nc-top {
@@ -160,17 +189,24 @@ body {
 .carambola-download-box {
 	padding: 1em;
 	border-radius: 0.325em;
-	background: #068367;
+	background: var(--main-colour);
 	box-shadow: 0 0.2em 0.4em #0000003f;
 	color: #fff;
 	cursor: pointer;
 	overflow: auto;
 	margin-bottom: 0.75em;
 	transition: background 0.3s;
+	transition: box-shadow 0.3s;
 }
 
 .carambola-download-box:hover {
-	background: #044d3c;
+	background: #1c7fff;
+	box-shadow: 0 0.3em 0.6em #0000002f;
+}
+
+.carambola-download-box:active {
+	background: #1b53a6;
+	box-shadow: 0 0 0 #00000080;
 }
 
 .carambola-download-left {
