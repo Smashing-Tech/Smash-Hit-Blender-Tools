@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 4),
+	"version": (2, 0, 5),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -589,10 +589,21 @@ def removeEverythingEqualTo(array, value):
 			return array
 
 def sh_add_box(pos, size):
+	"""
+	Add a box to the scene and return reference to it
+	
+	See: https://blender.stackexchange.com/questions/2285/how-to-get-reference-to-objects-added-by-an-operator
+	"""
+	
 	bpy.ops.mesh.primitive_cube_add(size = 1.0, location = (pos[0], pos[1], pos[2]), scale = (size[0] * 2, size[1] * 2, size[2] * 2))
-	return bpy.data.objects[-1] # return newest object
+	
+	return bpy.context.active_object
 
 def sh_add_empty():
+	"""
+	Add an empty object and return a reference to it
+	"""
+	
 	o = bpy.data.objects.new("empty", None)
 	
 	bpy.context.scene.collection.objects.link(o)
