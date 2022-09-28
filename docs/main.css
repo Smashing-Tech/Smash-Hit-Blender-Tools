@@ -1,30 +1,32 @@
 /* Carambola Website CSS */
-@import url('https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
 
 /* Remove default padding */
 * {
 	margin: 0;
 	padding: 0;
-	--main-colour: #0eb2ff;
+	--main-colour: #0667a8;
+	--font-face: "Rubik", sans-serif;
 }
 
 h1, h2, h3, h4, p, li {
-	font-family: "PT Sans", sans-serif;
+	font-family: var(--font-face);
 	margin-top: 0.15em;
 	margin-bottom: 0.5em;
 }
 
 h1 { font-size: 42pt; color: var(--main-colour); text-align: center; margin: 0.75em; }
 h2 { font-size: 28pt; color: var(--main-colour); text-align: center; }
-h3 { font-size: 22pt; }
+h3 { font-size: 22pt; border-bottom: 1px solid #8884; padding-top: 0.8em; padding-bottom: 0.2em; }
 h4 { font-size: 18pt; }
-p, ul { font-size: 15pt; margin-bottom: 0.75em; }
+p, ul { font-size: 14pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
 .cb-quote { font-size: 20pt; line-height: 1.5; }
 
 .feature {
 	font-size: 19pt;
 	text-align: center;
+	padding-bottom: 0.75em;
 }
 
 .billboard {
@@ -32,21 +34,22 @@ ul { margin-left: 1em; }
 	box-shadow: 0 0.2em 0.4em #0000003f;
 }
 
-@media (prefers-color-scheme: dark) {
-	h1, h2 {
-		color: var(--main-colour);
-	}
-}
-
 a {
-	color: #fff;
+	color: var(--main-colour);
 	text-decoration-line: none;
-	border-radius: 0.2em;
-	transition: background 0.3s;
+	transition: color 0.3s;
 }
 
-a:hover {
-	background: #ffffff3a;
+@media (prefers-color-scheme: dark) {
+	@import url('./smashhitfont.css');
+	
+	h1 {
+		font-family: "Smash Hit", sans-serif;
+	}
+	
+	h1, h2, a {
+		color: #e0e0e0;
+	}
 }
 
 ::selection {
@@ -63,7 +66,9 @@ body {
 
 @media (prefers-color-scheme: dark) {
 	body {
-		background-image: url("./background-dark.png");
+/* 		background-image: url("./background-dark.png");\ */
+		background-image: none;
+		background: #000;
 	}
 }
 
@@ -72,26 +77,16 @@ body {
 	box-shadow: 0 0.0em 1.2em #0007;
 	background: #fff;
 	color: #1e1e1e;
-	max-width: 65em;
+	max-width: 75em;
 	margin: auto;
 	padding: 1em;
 	border-radius: 0.25em;
 }
 
-.main-section a {
-	color: var(--main-colour);
-	text-decoration-line: none;
-	border-radius: 0.2em;
-}
-
-.main-section a:hover {
-	background: var(--main-colour)3a;
-}
-
 @media (prefers-color-scheme: dark) {
 	.main-section {
-		background: #1b1d2bf0;
-		color: #fff;
+		background: #000;
+		color: #f8f8f8;
 	}
 	
 	.main-section a {
@@ -100,15 +95,14 @@ body {
 }
 
 .navbar-section {
-	-webkit-backdrop-filter: blur(0.5em);
-	backdrop-filter: blur(0.5em);
-	background: #eaeaead0;
+	-webkit-backdrop-filter: blur(1.25em);
+	backdrop-filter: blur(1.25em);
+	background: #eaeaeaa0;
 	border: none;
-	border-radius: 0.325em;
 	box-shadow: 0 0.2em 0.4em #0000003f;
 	padding: 1em;
 	position: fixed;
-	width: 63em;
+	width: 100%;
 }
 
 .post-navbar-padding {
@@ -123,7 +117,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
 	.navbar-section {
-		background: #555d;
+		background: #222a;
 		color: #fff;
 	}
 }
@@ -133,7 +127,7 @@ body {
 	font-size: 14pt;
 	display: inline-block;
 	vertical-align: middle;
-	font-family: "PT Sans", sans-serif;
+	font-family: var(--font-face);
 }
 
 .cb-logo-item {
@@ -141,7 +135,7 @@ body {
 	font-size: 18pt;
 	display: inline-block;
 	vertical-align: middle;
-	font-family: "PT Sans", sans-serif;
+	font-family: var(--font-face);
 }
 
 .nc-top {

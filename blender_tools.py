@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 5),
+	"version": (2, 0, 6),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -151,6 +151,10 @@ def sh_add_object(level_root, scene, obj, params):
 	# Add reflection property for boxes if not default
 	if (sh_type == "BOX" and obj.sh_properties.sh_reflective):
 		properties["reflection"] = "1"
+	
+	# Add glow property for boxes if not default
+	if (sh_type == "BOX" and obj.sh_properties.sh_glow != 0.0):
+		properties["glow"] = str(obj.sh_properties.sh_glow)
 	
 	# Add decal number if this is a decal
 	if (sh_type == "DEC"):
@@ -323,7 +327,8 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		# Write mesh if needed
 		if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
-			bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
+			bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
+			bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
 			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None))
 		
 		# Write XML
@@ -349,7 +354,8 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		# Set properties
 		# (TODO: maybe this should be passed to the function instead of just setting global vars?)
 		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
-		bake_mesh.VERTEX_LIGHT_ENABLED = params.get("bake_vertex_light", True)
+		bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
+		bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
 		
 		# Bake mesh
 		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
@@ -505,6 +511,7 @@ class sh_export(sh_ExportCommon):
 				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"lighting_enabled": sh_properties.sh_lighting,
 			}
 		)
 		
@@ -537,6 +544,7 @@ class sh_export_gz(sh_ExportCommon):
 				"sh_meshbake_template": self.sh_meshbake_template,
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"lighting_enabled": sh_properties.sh_lighting,
 			}
 		)
 		
@@ -564,6 +572,7 @@ class sh_export_test(Operator):
 				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"lighting_enabled": sh_properties.sh_lighting,
 				"sh_test_server": True,
 				"sh_meshbake_template": tryTemplatesPath()
 			}
@@ -980,6 +989,12 @@ class sh_SceneProperties(PropertyGroup):
 		description = "Enables ambient occlusion (per-vertex lighting)",
 		default = True
 		)
+	
+	sh_lighting: BoolProperty(
+		name = "Lighting",
+		description = "Enables some lighting features when baking the mesh",
+		default = False
+		)
 
 # Object (box/obstacle/powerup/decal/water) properties
 
@@ -1315,6 +1330,14 @@ class sh_EntityProperties(PropertyGroup):
 		max = 256.0,
 		size = 2,
 	)
+	
+	sh_glow: FloatProperty(
+		name = "Glow",
+		description = "The intensity of the light in \"watts\"; zero if this isn't a light",
+		default = 0.0,
+		min = 0.0,
+		max = 200.0,
+	)
 
 class sh_SegmentPanel(Panel):
 	bl_label = "Smash Hit"
@@ -1349,6 +1372,7 @@ class sh_SegmentPanel(Panel):
 		
 		layout.prop(sh_properties, "sh_menu_segment")
 		layout.prop(sh_properties, "sh_ambient_occlusion")
+		layout.prop(sh_properties, "sh_lighting")
 		
 		layout.separator()
 
@@ -1393,6 +1417,7 @@ class sh_ObstaclePanel(Panel):
 		if (sh_properties.sh_type == "BOX"):
 			layout.prop(sh_properties, "sh_reflective")
 			layout.prop(sh_properties, "sh_visible")
+			layout.prop(sh_properties, "sh_glow")
 			
 			if (sh_properties.sh_visible):
 				sub = layout.box()

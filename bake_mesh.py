@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 13, 4)
+VERSION = (0, 14, 0)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to
@@ -32,11 +32,14 @@ TILE_BITE_COL = 0.03125
 # includes back faces, so both must be enabled for those.
 BAKE_UNSEEN_FACES = False
 
-# Enable vertex lighting using delta boxes
-VERTEX_LIGHT_ENABLED = True
+# Enable ambient occlusion using delta boxes
+ABMIENT_OCCLUSION_ENABLED = True
 
-# Half of the size of the delta box when using the delta-box lighting method
-VERTEX_LIGHT_DELTA_BOX_SIZE = 0.5
+# Half of the size of the delta box when using the delta-box AO method
+ABMIENT_OCCLUSION_DELTA_BOX_SIZE = 0.5
+
+# Enable lighting
+LIGHTING_ENABLED = False
 
 ################################################################################
 ### END OF CONFIGURATION #######################################################
@@ -139,6 +142,12 @@ class Vector3:
 		z = self.x * other.y - self.y * other.x
 		return Vector3(x, y, z)
 	
+	def compose(self, other):
+		return Vector3(self.x * other.x, self.y * other.y, self.z * other.z)
+
+	def anticompose(self, other):
+		return Vector3(self.x / other.x, self.y / other.y, self.z / other.z)
+	
 	def copy(self):
 		return Vector3(self.x, self.y, self.z)
 	
@@ -152,6 +161,9 @@ class Vector3:
 		v = self.copy()
 		v.a = light
 		return v
+	
+	def asTuple(self):
+		return (self.x, self.y, self.z)
 	
 	def partialOpposite(self, ax, ay, az):
 		"""
@@ -228,7 +240,7 @@ class SegmentInfo:
 		
 		return (total, intersected)
 
-def doVertexLights(x, y, z, a, gc, normal):
+def doAmbientOcclusion(x, y, z, a, gc, normal):
 	"""
 	Compute the light at a vertex
 	
@@ -251,11 +263,11 @@ def doVertexLights(x, y, z, a, gc, normal):
 	"""
 	
 	# Find the size and half of the volume of the delta box
-	delta_box_size = Vector3(VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE, VERTEX_LIGHT_DELTA_BOX_SIZE)
-	delta_box_volume = 8.0 * ((VERTEX_LIGHT_DELTA_BOX_SIZE) ** 3)
+	delta_box_size = Vector3(ABMIENT_OCCLUSION_DELTA_BOX_SIZE, ABMIENT_OCCLUSION_DELTA_BOX_SIZE, ABMIENT_OCCLUSION_DELTA_BOX_SIZE)
+	delta_box_volume = 8.0 * ((ABMIENT_OCCLUSION_DELTA_BOX_SIZE) ** 3)
 	
 	# Find the box with largest volume intresecting the box around this vertex
-	accum, isect = gc.boxcast(Vector3(x, y, z) + normal * VERTEX_LIGHT_DELTA_BOX_SIZE, delta_box_size)
+	accum, isect = gc.boxcast(Vector3(x, y, z) + normal * ABMIENT_OCCLUSION_DELTA_BOX_SIZE, delta_box_size)
 	
 	# Find the light based on the volume taken
 	# This is min/max'd to not cause major issues if there is an overlaping box
@@ -263,13 +275,68 @@ def doVertexLights(x, y, z, a, gc, normal):
 	
 	return (a ** 2) * (1.0 - 0.47 * shade ** 0.3)
 
+def doLighting(x, y, z, r, g, b, gc):
+	"""
+	Does a rough approximation of illumination for the current point.
+	This is very engineered and very approximate.
+	
+	TODO: Fix bug where lights will show in places they should not show
+	"""
+	
+	# TODO: Make these globals
+	FASTGI_LIGHT_AMBIENT = Vector3(0.0, 0.0, 0.0)
+	
+	# Find the intensity of light
+	findIntenstity = lambda size, dist : min(max(1 / (((max(dist, size + 0.0001) - size) ** 2)), 0), 1)
+	
+	# Set a proper vector for the current colour
+	old_colour = Vector3(r, g, b)
+	
+	# Colour that will be added to old colour
+	add_colour = Vector3(0.0, 0.0, 0.0)
+	
+	# Make a proper vector for the current point coordintes
+	point = Vector3(x, y, z)
+	
+	for box in gc.boxes:
+		# Break if box is not a light
+		if (box.glow == 0.0): continue
+		
+		# Compute difference from point to box origin
+		difference = (box.pos - point)
+		distance = difference.length()
+		
+		# Find the nearest side coordinate index
+		facing_side = (0 if ((abs(difference.x) > abs(difference.y)) and (abs(difference.x) > abs(difference.z))) else (1 if (abs(difference.y) > abs(difference.z)) else 2))
+		
+		# Set box colour
+		box_colour = box.colour[facing_side]
+		
+		# Find the "radius" of the box used to make sure box size is less likely
+		# to affect the amount of light cast
+		radius = [box.size.x, box.size.y, box.size.z][facing_side]
+		
+		# Find the new colour of the point based on how much light was added to
+		# the point and its intensity.
+		add_colour += box_colour.compose(old_colour) * findIntenstity(radius, distance) * box.glow * 0.01
+	
+	print(f"add_colour: {add_colour}")
+	
+	# Get the final colour by adding to base box colour
+	r, g, b = (old_colour.compose(FASTGI_LIGHT_AMBIENT) + add_colour).asTuple()
+	
+	return (r, g, b)
+
 def correctColour(x, y, z, r, g, b, a, gc, normal):
 	"""
 	Do any final colour correction operations and per-vertex lighting.
 	"""
 	
-	if (VERTEX_LIGHT_ENABLED):
-		a = doVertexLights(x, y, z, a, gc, normal)
+	if (ABMIENT_OCCLUSION_ENABLED):
+		a = doAmbientOcclusion(x, y, z, a, gc, normal)
+	
+	if (LIGHTING_ENABLED):
+		r, g, b = doLighting(x, y, z, r, g, b, gc)
 	
 	return r * 0.5, g * 0.5, b * 0.5, a
 
@@ -518,7 +585,7 @@ class Box:
 	Very simple container for box data
 	"""
 	
-	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = (1.0, 1.0, 1.0), tileRot = (0, 0, 0)):
+	def __init__(self, seg, pos, size, colour = [Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0), Vector3(1.0, 1.0, 1.0)], tile = (0, 0, 0), tileSize = (1.0, 1.0, 1.0), tileRot = (0, 0, 0), glow = 0.0):
 		"""
 		seg: global segment context
 		pos: position
@@ -527,6 +594,7 @@ class Box:
 		tile: list or tuple of tiles to use
 		tileSize: size of the box tiles
 		tileRot: rotation of the boxes
+		glow: The power of the light (when using lighting extensions)
 		"""
 		
 		# Expand shorthands for vectors
@@ -544,6 +612,7 @@ class Box:
 		self.tile = tile
 		self.tileSize = tileSize
 		self.tileRot = tileRot
+		self.glow = glow
 	
 	def bakeGeometry(self):
 		"""
@@ -773,7 +842,10 @@ def parseXml(data, templates = {}):
 				# Tile rotation -- rot1 [rot2 rot3]
 				tileRot = parseIntTriplet(getFromTemplate(a, templates, t, "tileRot", "1"))
 				
-				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot))
+				# Lighting: Glow -- intensity
+				glow = float(getFromTemplate(a, templates, t, "glow", "0"))
+				
+				boxes.append(Box(seg, pos, size, colour, tile, tileSize, tileRot, glow))
 	
 	return seg
 
