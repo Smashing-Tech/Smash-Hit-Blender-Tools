@@ -11,7 +11,7 @@ import random
 import math
 
 # Version of mesh baker; this is not used anywhere.
-VERSION = (0, 14, 0)
+VERSION = (0, 14, 1)
 
 # The number of rows and columns in the tiles.mtx.png file. Change this if you
 # have overloaded the file with more tiles; note that you will also need to

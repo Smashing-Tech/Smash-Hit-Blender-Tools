@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 7),
+	"version": (2, 0, 8),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -78,6 +78,10 @@ def sh_create_root(scene, params):
 	# Add ambient lighting if enabled
 	if (scene.sh_lighting):
 		seg_props["ambient"] = str(scene.sh_lighting_ambient[0]) + " " + str(scene.sh_lighting_ambient[1]) + " " + str(scene.sh_lighting_ambient[2])
+	
+	# Add fog colour if not default
+	if (scene.sh_fog_colour_bottom[0] != 0.0 or scene.sh_fog_colour_bottom[1] != 0.0 or scene.sh_fog_colour_bottom[2] != 0.0 or scene.sh_fog_colour_top[0] != 1.0 or scene.sh_fog_colour_top[1] != 1.0 or scene.sh_fog_colour_top[2] != 1.0):
+		seg_props["fogcolor"] = str(scene.sh_fog_colour_bottom[0]) + " " + str(scene.sh_fog_colour_bottom[1]) + " " + str(scene.sh_fog_colour_bottom[2]) + " " + str(scene.sh_fog_colour_top[0]) + " " + str(scene.sh_fog_colour_top[1]) + " " + str(scene.sh_fog_colour_top[2])
 	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
@@ -705,6 +709,15 @@ def sh_import_segment(fp, context, compressed = False):
 	scene.sh_light_front = float(segattr.get("lightFront", "1"))
 	scene.sh_light_back = float(segattr.get("lightBack", "1"))
 	
+	# ambient, if lighting is enabled
+	lighting_ambient = segattr.get("ambient", None)
+	
+	if (lighting_ambient):
+		scene.sh_lighting = True
+		scene.sh_lighting_ambient = sh_parse_colour(lighting_ambient)[0]
+	else:
+		scene.sh_lighting = False
+	
 	for obj in root:
 		kind = obj.tag
 		properties = obj.attrib
@@ -727,8 +740,13 @@ def sh_import_segment(fp, context, compressed = False):
 			size = properties.get("size", "0.5 0.5 0.5").split(" ")
 			size = (float(size[2]), float(size[0]), float(size[1]))
 			
-			# Add the box
-			b = sh_add_box(pos, size)
+			# Add the box; zero size boxes are treated as points
+			b = None
+			if (size[0] <= 0.0 or size[1] <= 0.0 or size[2] <= 0.0):
+				b = sh_add_empty()
+				b.location = pos
+			else:
+				b = sh_add_box(pos, size)
 			
 			# Boxes can (and often do) have templates
 			b.sh_properties.sh_template = properties.get("template", "")
@@ -767,6 +785,9 @@ def sh_import_segment(fp, context, compressed = False):
 				b.sh_properties.sh_tile1 = tile[0]
 				b.sh_properties.sh_tile2 = tile[1]
 				b.sh_properties.sh_tile3 = tile[2]
+			
+			# Glow for lighting
+			b.sh_properties.sh_glow = float(properties.get("glow", "0"))
 		
 		# Obstacles
 		elif (kind == "obstacle"):
@@ -1007,7 +1028,25 @@ class sh_SceneProperties(PropertyGroup):
 		default = (0.0, 0.0, 0.0), 
 		min = 0.0,
 		max = 1.0,
-	) 
+	)
+	
+	sh_fog_colour_top: FloatVectorProperty(
+		name = "Top fog",
+		description = "Fog colour for Blender Tools quick test. While this does use the fogcolor xml attribute, this property cannot be inherited from templates or used like a normal property",
+		subtype = "COLOR_GAMMA",
+		default = (1.0, 1.0, 1.0), 
+		min = 0.0,
+		max = 1.0,
+	)
+	
+	sh_fog_colour_bottom: FloatVectorProperty(
+		name = "Bottom fog",
+		description = "Fog colour for Blender Tools quick test. While this does use the fogcolor xml attribute, this property cannot be inherited from templates or used like a normal property",
+		subtype = "COLOR_GAMMA",
+		default = (0.0, 0.0, 0.0), 
+		min = 0.0,
+		max = 1.0,
+	)
 
 # Object (box/obstacle/powerup/decal/water) properties
 
@@ -1376,6 +1415,7 @@ class sh_SegmentPanel(Panel):
 		
 		sub = layout.box()
 		sub.label(text = "Light", icon = "LIGHT")
+		sub.label(text = "Basic lighting")
 		sub.prop(sh_properties, "sh_light_right")
 		sub.prop(sh_properties, "sh_light_left")
 		sub.prop(sh_properties, "sh_light_top")
@@ -1383,12 +1423,16 @@ class sh_SegmentPanel(Panel):
 		sub.prop(sh_properties, "sh_light_front")
 		sub.prop(sh_properties, "sh_light_back")
 		
+		sub.label(text = "Advanced lighting")
+		sub.prop(sh_properties, "sh_lighting")
+		if (sh_properties.sh_lighting):
+			sub.prop(sh_properties, "sh_lighting_ambient")
+		
+		layout.prop(sh_properties, "sh_fog_colour_top")
+		layout.prop(sh_properties, "sh_fog_colour_bottom")
+		
 		layout.prop(sh_properties, "sh_menu_segment")
 		layout.prop(sh_properties, "sh_ambient_occlusion")
-		layout.prop(sh_properties, "sh_lighting")
-		
-		if (sh_properties.sh_lighting):
-			layout.prop(sh_properties, "sh_lighting_ambient")
 		
 		layout.separator()
 
@@ -1434,9 +1478,6 @@ class sh_ObstaclePanel(Panel):
 			layout.prop(sh_properties, "sh_reflective")
 			layout.prop(sh_properties, "sh_visible")
 			
-			if (bpy.context.scene.sh_properties.sh_lighting):
-				layout.prop(sh_properties, "sh_glow")
-			
 			if (sh_properties.sh_visible):
 				sub = layout.box()
 				
@@ -1461,6 +1502,12 @@ class sh_ObstaclePanel(Panel):
 					sub.prop(sh_properties, "sh_tile1")
 					sub.prop(sh_properties, "sh_tile2")
 					sub.prop(sh_properties, "sh_tile3")
+				
+				if (context.scene.sh_properties.sh_lighting):
+					sub = layout.box()
+					
+					sub.label(text = "Light", icon = "LIGHT")
+					sub.prop(sh_properties, "sh_glow")
 				
 				sub = layout.box()
 				

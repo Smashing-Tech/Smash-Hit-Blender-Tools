@@ -6,6 +6,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from multiprocessing import Process
 import socket
 import tempfile
+import xml.etree.ElementTree as et
 
 CONTENT_LEVEL = """<level>
 	<room type="http://{}:8000/room?youare={}&amp;ignore=" distance="1000" start="true" end="true" />
@@ -13,7 +14,7 @@ CONTENT_LEVEL = """<level>
 
 CONTENT_ROOM = """function init()
 	mgMusic(tostring(math.random(0, 28)))
-	mgFogColor(0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
+	mgFogColor({})
 	
 	confSegment("http://{}:8000/segment?youare={}&filetype=", 1)
 	
@@ -65,6 +66,16 @@ def loadFileBytes(path):
 	
 	return content
 
+def getSegmentFogColour(path):
+	"""
+	Get the segment fog colour string
+	
+	TODO: This would break if there are spacing errors. Unlikely, but maybe fix that?
+	"""
+	
+	root = et.fromstring(loadFileBytes(path).decode("utf-8"))
+	return root.attrib.get("fogcolor", "0 0 0 1 1 1").replace(" ", ", ")
+
 class AdServer(BaseHTTPRequestHandler):
 	"""
 	The request handler for the test server
@@ -87,7 +98,7 @@ class AdServer(BaseHTTPRequestHandler):
 				data = bytes(CONTENT_LEVEL.format(params["youare"], params["youare"]), "utf-8")
 			
 			elif (path.endswith("room")):
-				data = bytes(CONTENT_ROOM.format(params["youare"], params["youare"]), "utf-8")
+				data = bytes(CONTENT_ROOM.format(getSegmentFogColour(TEMPDIR + "segment.xml"), params["youare"], params["youare"]), "utf-8")
 				contenttype = "text/plain"
 			
 			elif (path.endswith("segment") and (params["filetype"] == ".xml")):
@@ -114,7 +125,7 @@ class AdServer(BaseHTTPRequestHandler):
 		self.wfile.write(data)
 		
 		# Log the request
-		print(self.client_address[0] + ":" + str(self.client_address[1]), self.command, self.path, "-> 200 OK",  f"\n\n{data}\n\n")
+		print(self.client_address[0] + ":" + str(self.client_address[1]), self.command, self.path, "-> 200 OK")
 
 def runServer():
 	"""
