@@ -218,6 +218,9 @@ class SegmentInfo:
 		self.top = float(getFromTemplate(attribs, templates, self.template, "lightTop", "1.0"))
 		self.bottom = float(getFromTemplate(attribs, templates, self.template, "lightBottom", "1.0"))
 		
+		# Ambient lighting (when enabled)
+		self.ambient = Vector3.fromString(getFromTemplate(attribs, templates, self.template, "ambient", "0 0 0"))
+		
 		self.boxes = boxes
 	
 	def boxcast(self, pos, size):
@@ -279,12 +282,10 @@ def doLighting(x, y, z, r, g, b, gc):
 	"""
 	Does a rough approximation of illumination for the current point.
 	This is very engineered and very approximate.
-	
-	TODO: Fix bug where lights will show in places they should not show
 	"""
 	
-	# TODO: Make these globals
-	FASTGI_LIGHT_AMBIENT = Vector3(0.0, 0.0, 0.0)
+	# Get amount of ambient light
+	ambient_light = gc.ambient
 	
 	# Find the intensity of light
 	findIntenstity = lambda size, dist : min(max(1 / (((max(dist, size + 0.0001) - size) ** 2)), 0), 1)
@@ -320,10 +321,8 @@ def doLighting(x, y, z, r, g, b, gc):
 		# the point and its intensity.
 		add_colour += box_colour.compose(old_colour) * findIntenstity(radius, distance) * box.glow * 0.01
 	
-	print(f"add_colour: {add_colour}")
-	
 	# Get the final colour by adding to base box colour
-	r, g, b = (old_colour.compose(FASTGI_LIGHT_AMBIENT) + add_colour).asTuple()
+	r, g, b = (old_colour.compose(ambient_light) + add_colour).asTuple()
 	
 	return (r, g, b)
 

@@ -8,7 +8,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 6),
+	"version": (2, 0, 7),
 	"blender": (3, 0, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -74,6 +74,10 @@ def sh_create_root(scene, params):
 	# Check for softshadow attrib and set
 	if (scene.sh_softshadow >= 0.0):
 		seg_props["softshadow"] = str(scene.sh_softshadow)
+	
+	# Add ambient lighting if enabled
+	if (scene.sh_lighting):
+		seg_props["ambient"] = str(scene.sh_lighting_ambient[0]) + " " + str(scene.sh_lighting_ambient[1]) + " " + str(scene.sh_lighting_ambient[2])
 	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
@@ -893,7 +897,7 @@ class sh_SceneProperties(PropertyGroup):
 		subtype = "XYZ",
 		default = (12.0, 10.0, 8.0), 
 		min = 0.0,
-		max = 750.0,
+		max = 1024.0,
 	) 
 	
 	sh_box_bake_mode: EnumProperty(
@@ -995,6 +999,15 @@ class sh_SceneProperties(PropertyGroup):
 		description = "Enables some lighting features when baking the mesh",
 		default = False
 		)
+	
+	sh_lighting_ambient: FloatVectorProperty(
+		name = "Ambient",
+		description = "Colour and intensity of the ambient light",
+		subtype = "COLOR_GAMMA",
+		default = (0.0, 0.0, 0.0), 
+		min = 0.0,
+		max = 1.0,
+	) 
 
 # Object (box/obstacle/powerup/decal/water) properties
 
@@ -1336,7 +1349,7 @@ class sh_EntityProperties(PropertyGroup):
 		description = "The intensity of the light in \"watts\"; zero if this isn't a light",
 		default = 0.0,
 		min = 0.0,
-		max = 200.0,
+		max = 1000.0,
 	)
 
 class sh_SegmentPanel(Panel):
@@ -1373,6 +1386,9 @@ class sh_SegmentPanel(Panel):
 		layout.prop(sh_properties, "sh_menu_segment")
 		layout.prop(sh_properties, "sh_ambient_occlusion")
 		layout.prop(sh_properties, "sh_lighting")
+		
+		if (sh_properties.sh_lighting):
+			layout.prop(sh_properties, "sh_lighting_ambient")
 		
 		layout.separator()
 
@@ -1417,7 +1433,9 @@ class sh_ObstaclePanel(Panel):
 		if (sh_properties.sh_type == "BOX"):
 			layout.prop(sh_properties, "sh_reflective")
 			layout.prop(sh_properties, "sh_visible")
-			layout.prop(sh_properties, "sh_glow")
+			
+			if (bpy.context.scene.sh_properties.sh_lighting):
+				layout.prop(sh_properties, "sh_glow")
 			
 			if (sh_properties.sh_visible):
 				sub = layout.box()
