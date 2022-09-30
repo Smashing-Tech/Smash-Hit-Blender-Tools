@@ -30,6 +30,7 @@ import importlib.util as imut
 import bake_mesh
 import obstacle_db
 import server
+import updater
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
@@ -1598,6 +1599,13 @@ def register():
 	
 	if (g_process_test_server):
 		g_process_test_server = server.runServerProcess()
+	
+	# Check for updates
+	try:
+		global bl_info
+		updater.show_update_dialogue(bl_info["version"])
+	except Exception as e:
+		print(f"Smash Hit Tools: updater.show_update_dialogue(): {e}")
 
 def unregister():
 	from bpy.utils import unregister_class

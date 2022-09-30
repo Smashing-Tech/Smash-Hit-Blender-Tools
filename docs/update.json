@@ -1,0 +1,14 @@
+{
+	"stable": {
+		"version": [2, 0, 0],
+		"download": "https://github.com/knot126/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip"
+	},
+	"prerelease": {
+		"version": [2, 0, 8],
+		"download": "https://github.com/knot126/Smash-Hit-Blender-Tools/releases/download/2.0.8-prerelease/shbt_v2.0.8.zip"
+	},
+	"nightly": {
+		"version": null,
+		"download": "https://github.com/knot126/Smash-Hit-Blender-Tools/archive/refs/heads/main.zip"
+	}
+}
