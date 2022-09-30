@@ -63,7 +63,7 @@ def check_for_updates(current_version, release_channel):
 		elif (new_version[0] == current_version[0]):
 			if (new_version[1] > current_version[1]):
 				return update
-			elif (new_verison[1] == current_version[1]):
+			elif (new_version[1] == current_version[1]):
 				if (new_version[2] > current_version[2]):
 					return update
 		
@@ -72,6 +72,8 @@ def check_for_updates(current_version, release_channel):
 	
 	except Exception as e:
 		print(f"Smash Hit Tools: Error checking for new versions:\t\t{e}")
+		
+		return None
 
 def show_update_dialogue(current_version):
 	"""
@@ -81,4 +83,8 @@ def show_update_dialogue(current_version):
 	update = check_for_updates(current_version, CHANNEL)
 	
 	if (update != None):
-		show_message("Smash Hit Tools Update", f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released!\n\nDownload the ZIP file here:\n{update.download}.")
+		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released!\n\nDownload the ZIP file here:\n{update.download}."
+		show_message("Smash Hit Tools Update", message)
+		print("Smash Hit Tools: " + message)
+	else:
+		print("Smash Hit Tools: Up to date (or checker failed or disabled)!")
