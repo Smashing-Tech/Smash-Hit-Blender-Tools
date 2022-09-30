@@ -2,7 +2,7 @@
 Blender Tools Updater
 """
 
-import bpy
+import bpy, functools
 import requests
 import json
 
@@ -31,10 +31,10 @@ def show_message(title = "Info", message = "", icon = "INFO"):
 	Show a message as a popup
 	"""
 	
-	def _draw(self, context):
+	def draw(self, context):
 		self.layout.label(text = message)
 	
-	bpy.context.window_manager.popup_menu(_draw, title = title, icon = icon)
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
 def check_for_updates(current_version, release_channel):
 	"""
@@ -83,8 +83,11 @@ def show_update_dialogue(current_version):
 	update = check_for_updates(current_version, CHANNEL)
 	
 	if (update != None):
-		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released!\n\nDownload the ZIP file here:\n{update.download}."
-		show_message("Smash Hit Tools Update", message)
+		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released!\n\nDownload the ZIP file here:\n{update.download}"
 		print("Smash Hit Tools: " + message)
+		
+		# HACK: Defer execution to when blender has actually loaded otherwise 
+		# we make it crash!
+		bpy.app.timers.register(functools.partial(show_message, "Smash Hit Tools Update", message), first_interval = 4.5)
 	else:
 		print("Smash Hit Tools: Up to date (or checker failed or disabled)!")
