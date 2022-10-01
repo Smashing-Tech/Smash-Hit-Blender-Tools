@@ -9,7 +9,7 @@
 	--font-face: "Rubik", sans-serif;
 }
 
-h1, h2, h3, h4, p, li {
+h1, h2, h3, h4, p, li, summary {
 	font-family: var(--font-face);
 	margin-top: 0.15em;
 	margin-bottom: 0.5em;
@@ -17,7 +17,7 @@ h1, h2, h3, h4, p, li {
 
 h1 { font-size: 42pt; color: var(--main-colour); text-align: center; margin: 0.75em; }
 h2 { font-size: 28pt; color: var(--main-colour); text-align: center; }
-h3 { font-size: 22pt; border-bottom: 1px solid #8884; padding-top: 0.8em; padding-bottom: 0.2em; }
+h3, summary { font-size: 20pt; font-weight: 400; border-bottom: 1px solid #8884; padding-top: 0.8em; padding-bottom: 0.2em; }
 h4 { font-size: 18pt; }
 p, ul { font-size: 14pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
