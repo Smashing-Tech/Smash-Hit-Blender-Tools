@@ -40,6 +40,10 @@ a {
 	transition: color 0.3s;
 }
 
+a.insecure-link::after {
+	content: url("./lock_open.svg");
+}
+
 @media (prefers-color-scheme: dark) {
 	@import url('./smashhitfont.css');
 	
@@ -92,6 +96,40 @@ body {
 	.main-section a {
 		color: var(--main-colour);
 	}
+}
+
+/* Warning */
+.warning-main {
+	background: #0088ff20;
+	border-radius: 0.325em;
+	overflow: auto;
+	padding: 0.625em;
+}
+
+.tip-main {
+	background: #00ff8020;
+	border-radius: 0.325em;
+	overflow: auto;
+	padding: 0.625em;
+}
+
+.warning-left {
+	float: left;
+	width: 32px;
+}
+
+.warning-right {
+	float: right;
+	width: calc(100% - 32px - 1em);
+	padding-left: 1em;
+}
+
+/* NEW token */
+.new-token {
+	background: #ff557f;
+	border-radius: 10000em;
+	color: #fff;
+	padding: 0 0.35em;
 }
 
 .navbar-section {
