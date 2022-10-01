@@ -2,12 +2,13 @@
 Blender Tools Updater
 """
 
+import common
 import bpy, functools
 import requests
 import json
 
-CHANNEL = "prerelease"
-UPDATE_INFO = "https://knot126.github.io/Smash-Hit-Blender-Tools/update.json"
+CHANNEL = common.CHANNEL
+UPDATE_INFO = common.UPDATE_INFO
 
 class Update():
 	"""
