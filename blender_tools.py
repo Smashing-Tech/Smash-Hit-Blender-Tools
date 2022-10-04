@@ -205,6 +205,19 @@ def sh_parse_tile(s):
 	
 	return final
 
+def sh_parse_tile_size(s):
+	"""
+	Parse tile strings
+	"""
+	
+	string = s.split(" ")
+	final = []
+	
+	for i in range(len(string)):
+		final.append(float(string[i]))
+	
+	return final
+
 def sh_parse_colour(s):
 	"""
 	Parse colour strings
@@ -333,6 +346,24 @@ def sh_import_segment(fp, context, compressed = False):
 				b.sh_properties.sh_tile1 = tile[0]
 				b.sh_properties.sh_tile2 = tile[1]
 				b.sh_properties.sh_tile3 = tile[2]
+			
+			# Tile size
+			tileSize = sh_parse_tile_size(properties.get("tileSize", "1"))
+			tileSizeLen = len(tileSize)
+			
+			# Clever trick to parse the tile sizes; for 1 tilesize this applies
+			# to all sides, for 3 tilesize this applies each tilesize to their
+			# proper demension. (If there are two, they are assigned "X Y" -> X Y Y
+			# but that should never happen)
+			for i in range(3):
+				b.sh_properties.sh_tilesize[i] = tileSize[min(i, tileSizeLen - 1)]
+			
+			# TODO: I'm not adding sh_parse_tilerot for now...
+			tileRot = sh_parse_tile(properties.get("tileRot", "0"))
+			tileRotLen = len(tileRot)
+			
+			for i in range(3):
+				b.sh_properties.sh_tilerot[i] = tileRot[min(i, tileRotLen - 1)] % 4 # HACK: ... so I'm doing this :)
 			
 			# Glow for lighting
 			b.sh_properties.sh_glow = float(properties.get("glow", "0"))
@@ -924,7 +955,7 @@ class sh_EntityProperties(PropertyGroup):
 	
 	sh_size: FloatVectorProperty(
 		name = "Size",
-		description = "The size of the object when exported. For boxes this is the tileSize property",
+		description = "The size of the object when exported",
 		default = (1.0, 1.0), 
 		min = 0.0,
 		max = 256.0,
@@ -1026,6 +1057,7 @@ class sh_ObstaclePanel(Panel):
 			layout.prop(sh_properties, "sh_reflective")
 			layout.prop(sh_properties, "sh_visible")
 			
+			# Properties affected by being visible
 			if (sh_properties.sh_visible):
 				sub = layout.box()
 				
@@ -1056,12 +1088,13 @@ class sh_ObstaclePanel(Panel):
 					
 					sub.label(text = "Light", icon = "LIGHT")
 					sub.prop(sh_properties, "sh_glow")
-				
-				sub = layout.box()
-				
-				sub.label(text = "Transforms", icon = "GRAPH")
-				sub.prop(sh_properties, "sh_tilesize")
-				sub.prop(sh_properties, "sh_tilerot")
+			
+			# Box Transformations
+			sub = layout.box()
+			
+			sub.label(text = "Transforms", icon = "GRAPH")
+			sub.prop(sh_properties, "sh_tilesize")
+			sub.prop(sh_properties, "sh_tilerot")
 		
 		# Colourisation and blend for decals
 		if (sh_properties.sh_type == "DEC"):

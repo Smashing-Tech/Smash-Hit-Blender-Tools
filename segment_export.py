@@ -211,7 +211,7 @@ def sh_add_object(level_root, scene, obj, params):
 		
 		properties["size"] = str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	
-	# Add rotation paramater if any rotation has been done and this is a box
+	# Add rotation paramater if any rotation has been done
 	if (sh_type == "OBS" or sh_type == "DEC"):
 		if (obj.rotation_euler[1] != 0.0 or obj.rotation_euler[2] != 0.0 or obj.rotation_euler[0] != 0.0):
 			properties["rot"] = str(obj.rotation_euler[1]) + " " + str(obj.rotation_euler[2]) + " " + str(obj.rotation_euler[0])
@@ -290,8 +290,12 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["tile"] = str(obj.sh_properties.sh_tile)
 		else:
 			properties["tile"] = str(obj.sh_properties.sh_tile1) + " " + str(obj.sh_properties.sh_tile2) + " " + str(obj.sh_properties.sh_tile3)
+	
+	# tileSize and tileRot for boxes
+	if (sh_type == "BOX"):
+		if (obj.sh_properties.sh_tilesize[0] != 1.0 or obj.sh_properties.sh_tilesize[1] != 1.0 or obj.sh_properties.sh_tilesize[2] != 1.0):
+			properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
 		
-		properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
 		if (obj.sh_properties.sh_tilerot[1] > 0.0 or obj.sh_properties.sh_tilerot[2] > 0.0 or obj.sh_properties.sh_tilerot[0] > 0.0):
 			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[0]) + " " + str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2])
 	
