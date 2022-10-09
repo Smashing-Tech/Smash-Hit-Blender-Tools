@@ -7,6 +7,8 @@ from multiprocessing import Process
 import socket
 import tempfile
 import xml.etree.ElementTree as et
+import common
+import os
 
 CONTENT_LEVEL = """<level>
 	<room type="http://{}:8000/room?youare={}&amp;ignore=" distance="1000" start="true" end="true" />
@@ -65,6 +67,24 @@ def loadFileBytes(path):
 	f.close()
 	
 	return content
+
+def log(*args):
+	"""
+	Write content to a log file
+	"""
+	
+	content = ""
+	
+	for a in args:
+		content += format(a) + (" " if a != args[-1] else "")
+	
+	if (common.PRINT_LOGGING):
+		print(content)
+	
+	if (common.FILE_LOGGING):
+		f = open(TEMPDIR + "server.log", "a")
+		f.write(content + "\n")
+		f.close()
 
 def getSegmentFogColour(path):
 	"""
@@ -125,7 +145,10 @@ class AdServer(BaseHTTPRequestHandler):
 		self.wfile.write(data)
 		
 		# Log the request
-		print(self.client_address[0] + ":" + str(self.client_address[1]), self.command, self.path, "-> 200 OK")
+		log(self.client_address[0] + ":" + str(self.client_address[1]), self.command, self.path, "-> 200 OK")
+		log(" ------------------------------------------------------------- ")
+		log(format(data))
+		log("\n\n\n")
 
 def runServer():
 	"""
@@ -134,12 +157,12 @@ def runServer():
 	
 	server = HTTPServer(("0.0.0.0", 8000), AdServer)
 	
-	print("Smash Hit Tools: Server running!")
+	log("Smash Hit Tools: Server running!")
 	
 	try:
 		server.serve_forever()
 	except Exception as e:
-		print("Smash Hit Tools: Test server is down:\n\n", e)
+		log("Smash Hit Tools: Test server is down:\n\n", e)
 	
 	server.server_close()
 

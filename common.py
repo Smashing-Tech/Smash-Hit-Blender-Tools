@@ -9,8 +9,8 @@ BL_INFO = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Knot126",
-	"version": (2, 0, 11),
-	"blender": (3, 0, 0),
+	"version": (2, 0, 12),
+	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
 	"wiki_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/wiki",
@@ -31,4 +31,10 @@ CHANNEL = "prerelease"
 """
 Update info URL
 """
-UPDATE_INFO = "https://knot126.github.io/Smash-Hit-Blender-Tools/update.json"
+UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.json"
+
+"""
+Enable logging
+"""
+PRINT_LOGGING = (CHANNEL != "stable")
+FILE_LOGGING = True
