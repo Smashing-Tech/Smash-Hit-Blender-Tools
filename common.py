@@ -37,4 +37,4 @@ UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.js
 Enable logging
 """
 PRINT_LOGGING = (CHANNEL != "stable")
-FILE_LOGGING = True
+FILE_LOGGING = False

@@ -23,6 +23,10 @@ p, ul { font-size: 14pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
 .cb-quote { font-size: 20pt; line-height: 1.5; }
 
+code {
+	background: #8883;
+}
+
 .feature {
 	font-size: 19pt;
 	text-align: center;
