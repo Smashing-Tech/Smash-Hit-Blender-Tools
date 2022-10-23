@@ -252,6 +252,17 @@ def sh_import_segment(fp, context, compressed = False):
 	scene = context.scene.sh_properties
 	segattr = root.attrib
 	
+	# Check segment protection and enforce it
+	# 
+	# These are not designed to stop someone really dedicated from stealing
+	# segments, but it should stop someone from casually copying segments.
+	drm = segattr.get("drm", None).split(" ")
+	
+	if (drm):
+		for d in drm:
+			if (d == "NoImport"):
+				return {"FINISHED"}
+	
 	# Segment length
 	seg_size = segattr.get("size", "12 10 0").split(" ")
 	scene.sh_len = (float(seg_size[0]), float(seg_size[1]), float(seg_size[2]))
@@ -597,6 +608,16 @@ class sh_SceneProperties(PropertyGroup):
 	sh_lighting: BoolProperty(
 		name = "Lighting",
 		description = "Enables some lighting features when baking the mesh",
+		default = False
+		)
+	
+	# Yes, I'm trying to add "DRM" support for this. It can barely be called that
+	# but I think it would fit the definition of DRM, despite not being very
+	# strong. This isn't available in the UI for now to emphasise that it's not
+	# really that useful.
+	sh_drm_disallow_import: BoolProperty(
+		name = "Disallow import",
+		description = "This will disallow importing the exported segment. It can very easily be bypassed, but might prevent a casual user from editing your segment without asking. Please use this feature wisely and consider providing Blender files for people who ask nicely",
 		default = False
 		)
 	

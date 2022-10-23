@@ -158,6 +158,10 @@ def sh_create_root(scene, params):
 	if (scene.sh_fog_colour_bottom[0] != 0.0 or scene.sh_fog_colour_bottom[1] != 0.0 or scene.sh_fog_colour_bottom[2] != 0.0 or scene.sh_fog_colour_top[0] != 1.0 or scene.sh_fog_colour_top[1] != 1.0 or scene.sh_fog_colour_top[2] != 1.0):
 		seg_props["fogcolor"] = str(scene.sh_fog_colour_bottom[0]) + " " + str(scene.sh_fog_colour_bottom[1]) + " " + str(scene.sh_fog_colour_bottom[2]) + " " + str(scene.sh_fog_colour_top[0]) + " " + str(scene.sh_fog_colour_top[1]) + " " + str(scene.sh_fog_colour_top[2])
 	
+	# Protection
+	if (scene.sh_drm_disallow_import):
+		seg_props["drm"] = "NoImport"
+	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
 	level_root.text = "\n\t"
