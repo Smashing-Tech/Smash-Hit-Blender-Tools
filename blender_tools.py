@@ -720,6 +720,7 @@ class sh_SegmentPanel(Panel):
 		
 		layout.prop(sh_properties, "sh_menu_segment")
 		layout.prop(sh_properties, "sh_ambient_occlusion")
+		layout.prop(sh_properties, "sh_drm_disallow_import")
 		
 		layout.separator()
 
