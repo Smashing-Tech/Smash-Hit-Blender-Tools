@@ -4,8 +4,8 @@
 		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip"
 	},
 	"prerelease": {
-		"version": [2, 0, 13],
-		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/archive/refs/heads/main.zip"
+		"version": [2, 0, 14],
+		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.0.14/shbt_2.0.14.zip"
 	},
 	"nightly": {
 		"version": null,
