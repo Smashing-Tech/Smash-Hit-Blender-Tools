@@ -1,3 +1,7 @@
+"""
+Smash Hit Blender Tools segment export
+"""
+
 import common
 import xml.etree.ElementTree as et
 import bpy
