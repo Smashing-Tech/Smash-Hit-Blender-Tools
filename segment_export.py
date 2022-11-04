@@ -5,14 +5,11 @@ Smash Hit Blender Tools segment export
 import common
 import xml.etree.ElementTree as et
 import bpy
-import bpy_extras
 import gzip
-import json
 import os
 import os.path as ospath
 import pathlib
 import tempfile
-import importlib.util as imut
 import bake_mesh
 import obstacle_db
 
@@ -24,14 +21,16 @@ def tryTemplatesPath():
 	Try to get the path of the templates.xml file automatically
 	"""
 	
+	# Search for templates.xml and set path
+	path = ""
+	
+	print("Smash Hit Tools: Trying to find templates from APK Editor Studio ...")
+	
+	##
+	## Templates from APK Editor Studio
+	##
+	
 	try:
-		print("Smash Hit Tools: Auto find templates invoked.")
-		print("Smash Hit Tools: Trying to find templates from APK Editor Studio")
-		
-		##
-		## Templates from APK Editor Studio
-		##
-		
 		# Get the search path
 		search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
 		
@@ -39,9 +38,6 @@ def tryTemplatesPath():
 		
 		# Enumerate files
 		dirs = os.listdir(search_path)
-		
-		# Search for templates.xml and set path
-		path = ""
 		
 		for d in dirs:
 			cand = search_path + "/" + d + "/assets/templates.xml.mp3"
@@ -51,21 +47,22 @@ def tryTemplatesPath():
 			if ospath.exists(cand):
 				path = cand
 				break
-		
-		##
-		## Templates file from home directory
-		##
-		
-		homedir_templates = str(pathlib.Path.home()) + "/smash-hit-templates.xml"
-		
-		if (not path and ospath.exists(homedir_templates)):
-			path = homedir_templates
-		
-		print(f"Smash Hit Tools: Got file: \"{path}\"")
-		
-		return path
 	except FileNotFoundError:
-		return ""
+		print("Smash Hit Tools: No APK Editor Studio folder found.")
+	
+	##
+	## Templates file from home directory
+	##
+	
+	homedir_templates = [common.TOOLS_HOME_FOLDER + "/templates.xml", common.HOME_FOLDER + "/smash-hit-templates.xml"]
+	
+	for f in homedir_templates:
+		if (not path and ospath.exists(f)):
+			path = f
+	
+	print(f"Smash Hit Tools: Got file: \"{path}\"")
+	
+	return path
 
 class ExportHelper2:
 	"""

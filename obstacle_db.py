@@ -1,4 +1,4 @@
-import pathlib
+import common
 
 # For obstacle picker
 OBSTACLES = [
@@ -75,7 +75,7 @@ OBSTACLES_LIST = ["3dcross", "babytoy", "bar", "beatmill", "beatsweeper", "beatw
 
 # Find custom obstacles
 try:
-	with open(str(pathlib.Path.home()) + "/smash-hit-obstacles.txt", "r") as f:
+	with open(common.TOOLS_HOME_FOLDER + "/obstacles.txt", "r") as f:
 		content = f.read()
 		content = content.split("\n")
 		

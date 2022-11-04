@@ -1,6 +1,8 @@
 """
 Common constants and tools between blender-specific modules
 """
+import pathlib
+import os
 
 """
 Addon info
@@ -38,3 +40,12 @@ Enable logging
 """
 PRINT_LOGGING = (CHANNEL != "stable")
 FILE_LOGGING = False
+
+"""
+Blender Tools configuration directory
+"""
+HOME_FOLDER = str(pathlib.Path.home())
+TOOLS_HOME_FOLDER = HOME_FOLDER + "/Smash Hit Blender Tools"
+
+# Create shbt folder if it does not exist
+os.makedirs(TOOLS_HOME_FOLDER, exist_ok = True)
