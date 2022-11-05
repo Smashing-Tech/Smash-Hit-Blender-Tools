@@ -8,6 +8,18 @@ Please see [the wiki](https://github.com/knot126/Smash-Hit-Blender-Tools/wiki) f
 
 ## Modules
 
+### Segment export
+
+*[`segment_export.py`](segment_export.py)*
+
+Handles exporting segments.
+
+### Segment import
+
+*[`segment_import.py`](segment_import.py)*
+
+Handles importing segments.
+
 ### Mesh baker
 
 *[`bake_mesh.py`](bake_mesh.py)*
@@ -37,3 +49,9 @@ This is the quick test server module. It contains the HTTP server that Smash Hit
 *[`updater.py`](updater.py)*
 
 This contains a script to check if Blender Tools is up to date, and pop up a message if it is not.
+
+### Common
+
+*[`common.py`](common.py)*
+
+Contains common constants throughout blender tools.
