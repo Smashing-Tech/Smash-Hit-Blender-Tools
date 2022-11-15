@@ -135,17 +135,20 @@ def sh_create_root(scene, params):
 	   "size": str(size["X"]) + " " + str(size["Y"]) + " " + str(size["Z"])
 	}
 	
-	# Lighting
-	if (scene.sh_light_left != 1.0):   seg_props["lightLeft"] = str(scene.sh_light_left)
-	if (scene.sh_light_right != 1.0):  seg_props["lightRight"] = str(scene.sh_light_right)
-	if (scene.sh_light_top != 1.0):    seg_props["lightTop"] = str(scene.sh_light_top)
-	if (scene.sh_light_bottom != 1.0): seg_props["lightBottom"] = str(scene.sh_light_bottom)
-	if (scene.sh_light_front != 1.0):  seg_props["lightFront"] = str(scene.sh_light_front)
-	if (scene.sh_light_back != 1.0):   seg_props["lightBack"] = str(scene.sh_light_back)
-	
 	# Check for the template attrib and set
 	if (scene.sh_template):
 		seg_props["template"] = scene.sh_template
+	
+	# Lighting
+	# We no longer export lighting info if the template is present since that should
+	# be taken care of there.
+	if (not scene.sh_template):
+		if (scene.sh_light_left != 1.0):   seg_props["lightLeft"] = str(scene.sh_light_left)
+		if (scene.sh_light_right != 1.0):  seg_props["lightRight"] = str(scene.sh_light_right)
+		if (scene.sh_light_top != 1.0):    seg_props["lightTop"] = str(scene.sh_light_top)
+		if (scene.sh_light_bottom != 1.0): seg_props["lightBottom"] = str(scene.sh_light_bottom)
+		if (scene.sh_light_front != 1.0):  seg_props["lightFront"] = str(scene.sh_light_front)
+		if (scene.sh_light_back != 1.0):   seg_props["lightBack"] = str(scene.sh_light_back)
 	
 	# Check for softshadow attrib and set
 	if (scene.sh_softshadow >= 0.0):

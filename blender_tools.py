@@ -235,7 +235,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_left: FloatProperty(
 		name = "Left",
 		description = "Light going on to the left side of boxes",
-		default = 1.0,
+		default = 0.8,
 		min = 0.0,
 		max = 1.0,
 		)
@@ -243,7 +243,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_right: FloatProperty(
 		name = "Right",
 		description = "Light going on to the right side of boxes",
-		default = 1.0,
+		default = 0.85,
 		min = 0.0,
 		max = 1.0,
 		)
@@ -251,7 +251,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_top: FloatProperty(
 		name = "Top",
 		description = "Light going on to the top side of boxes",
-		default = 1.0,
+		default = 0.9,
 		min = 0.0,
 		max = 1.0,
 		)
@@ -259,7 +259,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_bottom: FloatProperty(
 		name = "Bottom",
 		description = "Light going on to the bottom side of boxes",
-		default = 1.0,
+		default = 0.75,
 		min = 0.0,
 		max = 1.0,
 		)

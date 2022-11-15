@@ -10,13 +10,13 @@ Addon info
 BL_INFO = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
-	"author": "Knot126",
-	"version": (2, 0, 14),
+	"author": "Smashing Tech",
+	"version": (2, 0, 15),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
-	"wiki_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/wiki",
-	"tracker_url": "https://github.com/knot126/Smash-Hit-Blender-Tools/issues",
+	"wiki_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/wiki",
+	"tracker_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/issues",
 	"category": "Development",
 }
 
