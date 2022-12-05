@@ -189,6 +189,27 @@ class sh_SceneProperties(PropertyGroup):
 	Segment (scene) properties
 	"""
 	
+	sh_level: StringProperty(
+		name = "Level name",
+		description = "The name of the checkpoint that this segment belongs to. The checkpoints will go in alphabetical order, so it's recommended to prefix with 0_, 1_, 2_, etc",
+		default = "",
+		maxlen = SH_MAX_STR_LEN,
+		)
+	
+	sh_room: StringProperty(
+		name = "Room name",
+		description = "The name of the room that this segment belongs to. The rooms will go in alphabetical order, so it's recommended to prefix with 0_, 1_, 2_, etc",
+		default = "",
+		maxlen = SH_MAX_STR_LEN,
+		)
+	
+	sh_segment: StringProperty(
+		name = "Segment name",
+		description = "The name of this segment. You don't need to prefix this because the order will be random",
+		default = "",
+		maxlen = SH_MAX_STR_LEN,
+		)
+	
 	sh_len: FloatVectorProperty(
 		name = "Size",
 		description = "Segment size (Width, Height, Depth). Hint: Last paramater changes the length (depth) of the segment",
@@ -693,6 +714,10 @@ class sh_SegmentPanel(Panel):
 		layout = self.layout
 		scene = context.scene
 		sh_properties = scene.sh_properties
+		
+		# layout.prop(sh_properties, "sh_level")
+		# layout.prop(sh_properties, "sh_room")
+		# layout.prop(sh_properties, "sh_segment")
 		
 		layout.prop(sh_properties, "sh_len")
 		layout.prop(sh_properties, "sh_box_bake_mode")
