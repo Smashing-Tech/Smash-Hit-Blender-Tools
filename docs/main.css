@@ -1,12 +1,12 @@
 /* Carambola Website CSS */
-@import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;700&display=swap');
 
 /* Remove default padding */
 * {
 	margin: 0;
 	padding: 0;
-	--main-colour: #0667a8;
-	--font-face: "Rubik", sans-serif;
+	--main-colour: #0AFDEA;
+	--font-face: "Titillium Web", sans-serif;
 }
 
 h1, h2, h3, h4, p, li, summary {
@@ -17,7 +17,7 @@ h1, h2, h3, h4, p, li, summary {
 
 h1 { font-size: 42pt; color: var(--main-colour); text-align: center; margin: 0.75em; }
 h2 { font-size: 28pt; color: var(--main-colour); text-align: center; }
-h3, summary { font-size: 20pt; font-weight: 400; border-bottom: 1px solid #8884; padding-top: 0.8em; padding-bottom: 0.2em; }
+h3, summary { font-size: 20pt; font-weight: 400; border-bottom: 1px solid #0AFDEA40; padding-top: 0.8em; padding-bottom: 0.2em; }
 h4 { font-size: 18pt; }
 p, ul { font-size: 14pt; margin-bottom: 0.75em; }
 ul { margin-left: 1em; }
@@ -34,87 +34,57 @@ code {
 }
 
 .billboard {
-	border-radius: 0.425em;
-	box-shadow: 0 0.2em 0.4em #0000003f;
+	border-radius: 0.5em;
+/* 	box-shadow: 0 0.2em 0.4em #0000003f; */
 }
 
 a {
 	color: var(--main-colour);
 	text-decoration-line: none;
 	transition: color 0.3s;
+	font-weight: bold;
+}
+
+a:hover {
+	color: #fff;
 }
 
 a.insecure-link::after {
 	content: url("./lock_open.svg");
 }
 
-@media (prefers-color-scheme: dark) {
-	@import url('./smashhitfont.css');
-	
-	h1 {
-		font-family: "Smash Hit", sans-serif;
-	}
-	
-	h1, h2, a {
-		color: #e0e0e0;
-	}
-}
-
 ::selection {
 	background: var(--main-colour);
-	color: #fff;
+	color: #000;
 }
 
 body {
-	background-image: url("./background.png");
-	background-size: cover;
-	background-attachment: fixed;
-	color: rgb(0, 0, 0);
-}
-
-@media (prefers-color-scheme: dark) {
-	body {
-/* 		background-image: url("./background-dark.png");\ */
-		background-image: none;
-		background: #000;
-	}
+	background: #002624;
+	color: #fff;
 }
 
 .main-section {
 	border: none;
-	box-shadow: 0 0.0em 1.2em #0007;
-	background: #fff;
-	color: #1e1e1e;
+	color: var(--main-colour);
 	max-width: 75em;
 	margin: auto;
 	padding: 1em;
-	border-radius: 0.25em;
-}
-
-@media (prefers-color-scheme: dark) {
-	.main-section {
-		background: #000;
-		color: #f8f8f8;
-	}
-	
-	.main-section a {
-		color: var(--main-colour);
-	}
+	border-radius: 0.5em;
 }
 
 /* Warning */
 .warning-main {
-	background: #0088ff20;
-	border-radius: 0.325em;
+	background: #000;
+	border-radius: 0.5em;
 	overflow: auto;
-	padding: 0.625em;
+	padding: 0.5em;
 }
 
 .tip-main {
-	background: #00ff8020;
-	border-radius: 0.325em;
+	background: #000;
+	border-radius: 0.5em;
 	overflow: auto;
-	padding: 0.625em;
+	padding: 0.5em;
 }
 
 .warning-left {
@@ -130,18 +100,17 @@ body {
 
 /* NEW token */
 .new-token {
-	background: #ff557f;
+	background: #0AFDEA;
 	border-radius: 10000em;
-	color: #fff;
+	color: #000;
 	padding: 0 0.35em;
 }
 
 .navbar-section {
 	-webkit-backdrop-filter: blur(1.25em);
 	backdrop-filter: blur(1.25em);
-	background: #eaeaeaa0;
+	background: #002624e0;
 	border: none;
-	box-shadow: 0 0.2em 0.4em #0000003f;
 	padding: 1em;
 	position: fixed;
 	width: 100%;
@@ -152,8 +121,8 @@ body {
 }
 
 .bottom-section {
-	background: #8883;
-	border-radius: 0.325em;
+	border: 1px solid var(--main-colour);
+	border-radius: 0.5em;
 	padding: 0.5em;
 }
 
@@ -192,7 +161,7 @@ body {
 
 .top-section {
 	border-top: none;
-	border-radius: 0 0 0.325em 0.325em;
+	border-radius: 0 0 0.5em 0.5em;
 	margin-top: 0;
 	vertical-align: middle;
 	max-width: 50em;
@@ -224,10 +193,10 @@ body {
 
 .carambola-download-box {
 	padding: 1em;
-	border-radius: 0.325em;
+	border-radius: 0.5em;
 	background: var(--main-colour);
-	box-shadow: 0 0.2em 0.4em #0000003f;
-	color: #fff;
+/* 	box-shadow: 0 0.2em 0.4em #0000003f; */
+	color: #000;
 	cursor: pointer;
 	overflow: auto;
 	margin-bottom: 0.75em;
@@ -236,12 +205,12 @@ body {
 }
 
 .carambola-download-box:hover {
-	background: #1c7fff;
+	background: #fff;
 	box-shadow: 0 0.3em 0.6em #0000002f;
 }
 
 .carambola-download-box:active {
-	background: #1b53a6;
+	background: #fff;
 	box-shadow: 0 0 0 #00000080;
 }
 
