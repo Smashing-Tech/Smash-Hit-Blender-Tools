@@ -1,24 +1,29 @@
 """
 Common constants and tools between blender-specific modules
 """
+
 import pathlib
 import os
+import os.path
 
 """
 Addon info
+
+HACK Does some very fuck yiff stuff from hell becuase blender is a little shit sometimes :D
+more specifically they only parse the AST for bl_info so we can't just define it here if it's
+not already cached, which it isn't for new installs
 """
-BL_INFO = {
-	"name": "Smash Hit Tools",
-	"description": "Segment exporter and property editor for Smash Hit",
-	"author": "Smashing Tech",
-	"version": (2, 0, 16),
-	"blender": (3, 2, 0),
-	"location": "File > Import/Export and 3D View > Tools",
-	"warning": "",
-	"wiki_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/wiki",
-	"tracker_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/issues",
-	"category": "Development",
-}
+import dummy
+
+# Get the path
+BLENDER_TOOLS_PATH = os.path.abspath(dummy.__file__)[:-8]
+
+# Read main file
+BL_INFO = pathlib.Path(BLENDER_TOOLS_PATH + "/blender_tools.py").read_text()
+
+# Get the stuff
+# NOTE Breaks if we ever have { or } in bl_info
+BL_INFO = eval(BL_INFO[BL_INFO.index("{"):BL_INFO.index("}") + 1])
 
 """
 Max length for property strings

@@ -7,7 +7,18 @@ This mostly handles UI stuff
 import common
 
 SH_MAX_STR_LEN = common.MAX_STRING_LENGTH
-bl_info = common.BL_INFO
+bl_info = {
+	"name": "Smash Hit Tools",
+	"description": "Segment exporter and property editor for Smash Hit",
+	"author": "Smashing Tech",
+	"version": (2, 0, 17),
+	"blender": (3, 2, 0),
+	"location": "File > Import/Export and 3D View > Tools",
+	"warning": "",
+	"wiki_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/wiki",
+	"tracker_url": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/issues",
+	"category": "Development",
+}
 
 import xml.etree.ElementTree as et
 import bpy
