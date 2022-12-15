@@ -55,7 +55,7 @@ def check_for_updates(current_version, release_channel):
 	Check the new version against the current version
 	"""
 	
-	# return Update('release_channel', [99, 99, 99], "https://example.com/whatever.zip")
+	return Update('release_channel', [99, 99, 99], "https://example.com/whatever.zip")
 	
 	try:
 		info = download_json(UPDATE_INFO).get(release_channel, None)
