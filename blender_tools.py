@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 17),
+	"version": (2, 0, 18),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -31,7 +31,7 @@ import server
 import updater
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
-from bpy.types import (Panel, Menu, Operator, PropertyGroup)
+from bpy.types import (Panel, Menu, Operator, PropertyGroup, AddonPreferences)
 
 # The name of the test server. If set to false initially, the test server will
 # be disabled.
@@ -710,6 +710,40 @@ class sh_EntityProperties(PropertyGroup):
 		max = 1000.0,
 	)
 
+class sh_AddonPreferences(AddonPreferences):
+	bl_idname = "blender_tools"
+	
+	enable_update_notifier: BoolProperty(
+		name = "Enable update notifier",
+		description = "Enables the update notifier. This will try to contact github, which may pose a privacy risk",
+		default = True,
+	)
+	
+	enable_auto_update: BoolProperty(
+		name = "Enable automatic updates",
+		description = "Automatically downloads the newest version of Blender Tools. You still need to install it manually, and you should still check the website to make sure SHBT has not been cracked/hacked",
+		default = False,
+	)
+	
+	enable_quick_test_server: BoolProperty(
+		name = "Enable quick test server",
+		description = "Enables the quick test server. This will create a local http server using python, which might pose a security risk",
+		default = True,
+	)
+	
+	def draw(self, context):
+		ui = self.layout
+		
+		ui.label(text = "Network and privacy settings")
+		ui.prop(self, "enable_update_notifier")
+		if (self.enable_update_notifier):
+			ui.prop(self, "enable_auto_update")
+			if (self.enable_auto_update):
+				box = ui.box()
+				# box.label(icon = "ERROR", text = "Enabling the automatic updater means you won't be able to check that something contains a virus. We do not have the same security measures as other software to make sure that the software is coming from trusted developers. Please don't enable this option if you don't actually understand the risks.")
+				box.label(icon = "ERROR", text = "It's not recommended to enable this. Autoupdate is insecure.")
+		ui.prop(self, "enable_quick_test_server")
+
 class sh_SegmentPanel(Panel):
 	bl_label = "Smash Hit"
 	bl_idname = "OBJECT_PT_segment_panel"
@@ -891,9 +925,9 @@ class sh_ObstaclePanel(Panel):
 def run_updater():
 	try:
 		global bl_info
-		updater.show_update_dialogue(bl_info["version"])
+		updater.check_for_updates(bl_info["version"])
 	except Exception as e:
-		print(f"Smash Hit Tools: updater.show_update_dialogue(): {e}")
+		print(f"Smash Hit Tools: updater.check_for_updates(): {e}")
 
 classes = (
 	# Ignore the naming scheme for classes, please
@@ -901,6 +935,7 @@ classes = (
 	sh_EntityProperties,
 	sh_SegmentPanel,
 	sh_ObstaclePanel,
+	sh_AddonPreferences,
 	sh_export,
 	sh_export_gz,
 	sh_export_test,
@@ -929,7 +964,7 @@ def register():
 	# Start server
 	global g_process_test_server
 	
-	if (g_process_test_server):
+	if (g_process_test_server and bpy.context.preferences.addons["blender_tools"].preferences.enable_quick_test_server):
 		g_process_test_server = server.runServerProcess()
 	
 	# Check for updates

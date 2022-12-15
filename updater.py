@@ -8,6 +8,7 @@ import requests
 import json
 
 from bpy.types import (UILayout)
+from multiprocessing import Process
 
 CHANNEL = common.CHANNEL
 UPDATE_INFO = common.UPDATE_INFO
@@ -30,6 +31,32 @@ def download_json(source):
 	
 	return json.loads(requests.get(source).content)
 
+def download_update(source):
+	"""
+	Download an update
+	
+	For now we do not install it until I learn how software signing works under
+	the hood (and until that is implemented)
+	
+	ALSO WE DON'T EVER EVER EVER EVER ENABLE THIS BY DEFAULT
+	"""
+	
+	def update_downloader(url):
+		import shutil, pathlib, os
+		
+		data = requests.get(url).content
+		path = TOOLS_HOME_FOLDER + "/" + url.split("/")[-1].replace("/", "").replace("\\", "")
+		pathlib.Path(path).write_bytes(data)
+		
+		print("Smash Hit Tools: Downloaded latest update to " + path)
+		print("Please check it for malicous code then you can install it.")
+		
+		os._exit()
+	
+	p = Process(target = update_downloader, args = (source,))
+	
+	p.start()
+
 def download_component(source):
 	"""
 	Download a component of Blender Tools
@@ -38,7 +65,6 @@ def download_component(source):
 	import pathlib
 	
 	pathlib.Path(TOOLS_HOME_FOLDER + "/" + source.split("/")[-1]).write_bytes(requests.get(source).content)
-
 
 def show_message(title = "Info", message = "", icon = "INFO"):
 	"""
@@ -50,12 +76,12 @@ def show_message(title = "Info", message = "", icon = "INFO"):
 	
 	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
 
-def check_for_updates(current_version, release_channel):
+def get_latest_version(current_version, release_channel):
 	"""
 	Check the new version against the current version
 	"""
 	
-	return Update('release_channel', [99, 99, 99], "https://example.com/whatever.zip")
+	# return Update('stable', [2, 1, 0], "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip")
 	
 	try:
 		info = download_json(UPDATE_INFO).get(release_channel, None)
@@ -91,15 +117,23 @@ def check_for_updates(current_version, release_channel):
 		
 		return None
 
-def show_update_dialogue(current_version):
+def check_for_updates(current_version):
 	"""
 	Display a popup if there is an update.
 	"""
 	
-	update = check_for_updates(current_version, CHANNEL)
+	if (not bpy.context.preferences.addons["blender_tools"].preferences.enable_update_notifier):
+		return
+	
+	update = get_latest_version(current_version, CHANNEL)
 	
 	if (update != None):
-		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released!\n\nDownload the ZIP file here:\n{update.download}"
+		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released! Download the ZIP file here: {update.download}"
+		
+		if (bpy.context.preferences.addons["blender_tools"].preferences.enable_auto_update):
+			download_update(update.download)
+			message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released. The ZIP file has been downloaded to your SHBT folder, you just need to install it!"
+		
 		print("Smash Hit Tools: " + message)
 		
 		# HACK: Defer execution to when blender has actually loaded otherwise 
