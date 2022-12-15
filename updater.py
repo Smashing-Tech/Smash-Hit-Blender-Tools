@@ -7,8 +7,11 @@ import bpy, functools
 import requests
 import json
 
+from bpy.types import (UILayout)
+
 CHANNEL = common.CHANNEL
 UPDATE_INFO = common.UPDATE_INFO
+TOOLS_HOME_FOLDER = common.TOOLS_HOME_FOLDER
 
 class Update():
 	"""
@@ -27,6 +30,16 @@ def download_json(source):
 	
 	return json.loads(requests.get(source).content)
 
+def download_component(source):
+	"""
+	Download a component of Blender Tools
+	"""
+	
+	import pathlib
+	
+	pathlib.Path(TOOLS_HOME_FOLDER + "/" + source.split("/")[-1]).write_bytes(requests.get(source).content)
+
+
 def show_message(title = "Info", message = "", icon = "INFO"):
 	"""
 	Show a message as a popup
@@ -41,6 +54,8 @@ def check_for_updates(current_version, release_channel):
 	"""
 	Check the new version against the current version
 	"""
+	
+	# return Update('release_channel', [99, 99, 99], "https://example.com/whatever.zip")
 	
 	try:
 		info = download_json(UPDATE_INFO).get(release_channel, None)

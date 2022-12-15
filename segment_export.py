@@ -396,6 +396,9 @@ def createSegmentText(context, params):
 	
 	return content
 
+def MB_progress_update_callback(value):
+	bpy.context.window_manager.progress_update(value)
+
 def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
@@ -419,16 +422,22 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		if (ospath.exists(tempdir + "/segment.mesh")):
 			os.remove(tempdir + "/segment.mesh")
 		
+		context.window_manager.progress_begin(0.0, 1.0)
+		
 		# Write mesh if needed
 		if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
 			bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
 			bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
-			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None))
+			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None), bake_mesh.BakeProgressInfo(MB_progress_update_callback))
+		
+		context.window_manager.progress_end()
 		
 		# Write XML
 		with open(tempdir + "/segment.xml", "w") as f:
 			f.write(content)
+		
+		context.window.cursor_set('DEFAULT')
 		
 		return {'FINISHED'}
 	
@@ -453,7 +462,9 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
 		
 		# Bake mesh
-		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None))
+		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None), bake_mesh.BakeProgressInfo(MB_progress_update_callback))
+	
+	context.window_manager.progress_update(0.8)
 	
 	# Write out file
 	if (not compress):
@@ -463,6 +474,8 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 		with gzip.open(filepath, "wb") as f:
 			f.write(content.encode())
 	
+	context.window_manager.progress_update(1.0)
+	context.window_manager.progress_end()
 	context.window.cursor_set('DEFAULT')
 	
 	return {"FINISHED"}

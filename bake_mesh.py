@@ -171,6 +171,17 @@ class Vector3:
 		"""
 		return Vector3(self.x if not ax else -self.x, self.y if not ay else -self.y, self.z if not az else -self.z)
 
+class BakeProgressInfo():
+	"""
+	Allows apps to implement progress indication
+	"""
+	
+	def __init__(self, callback):
+		self.callback = callback
+	
+	def update(self, value):
+		self.callback(value)
+
 def parseIntTriplet(string):
 	"""
 	Parse either a single int or three ints in a string to a tuple of three ints
@@ -815,7 +826,7 @@ def meshPointBytes(x, y, z, u, v, r, g, b, a, gc, normal):
 	
 	return c
 
-def generateMeshData(data, seg = None):
+def generateMeshData(data, seg = None, progress = None):
 	"""
 	Generates mesh data bytes
 	"""
@@ -834,7 +845,9 @@ def generateMeshData(data, seg = None):
 	for d in data:
 		r = d.asData(vertex_count)
 		
-		# print(f"Exported quad {i} of {l} [{(i / l) * 100.0}% done]"); i += 1;
+		if (progress):
+			progress.update(0.5 + 0.5 * (i / l))
+			i += 1
 		
 		vertex += r[0]
 		index += r[1]
@@ -856,7 +869,7 @@ def generateMeshData(data, seg = None):
 ## =============================================================================
 ## =============================================================================
 
-def bakeMesh(data, templates_path = None):
+def bakeMesh(data, templates_path = None, progress = None):
 	"""
 	Bake a mesh from Smash Hit segment and return data
 	
@@ -869,18 +882,25 @@ def bakeMesh(data, templates_path = None):
 	
 	meshData = []
 	
+	i = 0
+	l = len(boxes)
+	
 	for box in boxes:
+		if (progress):
+			progress.update(0.5 * (i / l))
+			i += 1
+		
 		meshData += box.bakeGeometry()
 	
-	return generateMeshData(meshData, seg)
+	return generateMeshData(meshData, seg, progress)
 
-def bakeMeshToFile(data, output_file, template_file = None):
+def bakeMeshToFile(data, output_file, template_file = None, progress = None):
 	"""
 	Given the segment data as a string, bake a mesh file, optionally using the
 	templates specififed.
 	"""
 	
-	mesh_data = bakeMesh(data, template_file)
+	mesh_data = bakeMesh(data, template_file, progress)
 	
 	f = open(output_file, "wb")
 	f.write(mesh_data)
