@@ -399,7 +399,7 @@ def createSegmentText(context, params):
 def MB_progress_update_callback(value):
 	bpy.context.window_manager.progress_update(value)
 
-def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmultiply": 1.0, "sh_box_bake_mode": "Mesh"}):
+def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
 	"""
@@ -407,6 +407,17 @@ def sh_export_segment(filepath, context, *, compress = False, params = {"sh_vrmu
 	context.window.cursor_set('WAIT')
 	
 	content = createSegmentText(context, params)
+	
+	# Binary segments
+	if (params.get("binary", True)):
+		import binaryxml
+		
+		content = binaryxml.from_string(content)
+		
+		with open(filepath, "wb") as f:
+			f.write(content)
+		
+		return {'FINISHED'}
 	
 	##
 	## Handle test server mode

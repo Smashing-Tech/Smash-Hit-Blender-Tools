@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 18),
+	"version": (2, 0, 19),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -152,6 +152,39 @@ class sh_export_test(Operator):
 
 def sh_draw_export_test(self, context):
 	self.layout.operator("sh.export_test_server", text="SHBT Quick Test Server")
+
+class sh_export_binary(sh_ExportCommon):
+	"""
+	Binary segment export
+	"""
+	
+	bl_idname = "sh.export_bin"
+	bl_label = "Export Binary Segment"
+	
+	filename_ext = ".bin"
+	filter_glob = bpy.props.StringProperty(default='*.bin', options={'HIDDEN'}, maxlen=255)
+	
+	def execute(self, context):
+		sh_properties = context.scene.sh_properties
+		
+		result = segment_export.sh_export_segment(
+			self.filepath,
+			context,
+			params = {
+				"sh_meshbake_template": self.sh_meshbake_template,
+				"sh_vrmultiply": sh_properties.sh_vrmultiply,
+				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
+				"bake_menu_segment": sh_properties.sh_menu_segment,
+				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"lighting_enabled": sh_properties.sh_lighting,
+				"binary": True,
+			}
+		)
+		
+		return result
+
+def sh_draw_export_binary(self, context):
+	self.layout.operator("sh.export_bin", text="Binary Segment (.bin)")
 
 # UI-related
 
@@ -938,6 +971,7 @@ classes = (
 	sh_AddonPreferences,
 	sh_export,
 	sh_export_gz,
+	sh_export_binary,
 	sh_export_test,
 	sh_import,
 	sh_import_gz,
@@ -955,6 +989,7 @@ def register():
 	# Add the export operator to menu
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_gz)
+	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_binary)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_test)
 	
 	# Add import operators to menu
