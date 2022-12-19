@@ -101,6 +101,16 @@ def sh_parse_colour(s):
 	else:
 		return [(float(a[0]), float(a[1]), float(a[2])), (float(a[3]), float(a[4]), float(a[5])), (float(a[6]), float(a[7]), float(a[8]))]
 
+def show_message(title = "Info", message = "", icon = "INFO"):
+	"""
+	Show a message as a popup
+	"""
+	
+	def draw(self, context):
+		self.layout.label(text = message)
+	
+	bpy.context.window_manager.popup_menu(draw, title = title, icon = icon)
+	
 def sh_import_segment(fp, context, compressed = False):
 	"""
 	Load a Smash Hit segment into blender
@@ -131,6 +141,7 @@ def sh_import_segment(fp, context, compressed = False):
 		
 		for d in drm:
 			if (d == "NoImport"):
+				show_message("Import error", "There was an error importing this segment.")
 				return {"FINISHED"}
 	
 	# Segment length
