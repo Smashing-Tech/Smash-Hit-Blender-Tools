@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 19),
+	"version": (2, 0, 20),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
