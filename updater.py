@@ -151,7 +151,7 @@ def get_latest_version(current_version, release_channel):
 			return None
 		
 		# Create the update object, if we need to use it
-		update = Update(release_channel, new_version, info["download"], blender_version, info["checksum"], info["signature"])
+		update = Update(release_channel, new_version, info["download"], info["checksum"], info["signature"])
 		
 		return update
 	
