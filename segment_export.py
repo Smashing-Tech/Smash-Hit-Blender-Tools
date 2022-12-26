@@ -162,6 +162,18 @@ def sh_create_root(scene, params):
 	if (scene.sh_fog_colour_bottom[0] != 0.0 or scene.sh_fog_colour_bottom[1] != 0.0 or scene.sh_fog_colour_bottom[2] != 0.0 or scene.sh_fog_colour_top[0] != 1.0 or scene.sh_fog_colour_top[1] != 1.0 or scene.sh_fog_colour_top[2] != 1.0):
 		seg_props["fogcolor"] = str(scene.sh_fog_colour_bottom[0]) + " " + str(scene.sh_fog_colour_bottom[1]) + " " + str(scene.sh_fog_colour_bottom[2]) + " " + str(scene.sh_fog_colour_top[0]) + " " + str(scene.sh_fog_colour_top[1]) + " " + str(scene.sh_fog_colour_top[2])
 	
+	# Music track
+	if (scene.sh_music):
+		seg_props["qt-music"] = scene.sh_music
+	
+	# Reverb options
+	if (scene.sh_reverb):
+		seg_props["qt-reverb"] = scene.sh_reverb
+	
+	# Particle effect
+	if (scene.sh_reverb):
+		seg_props["qt-particles"] = scene.sh_particles
+	
 	# Protection
 	if (scene.sh_drm_disallow_import):
 		seg_props["drm"] = "NoImport"
@@ -409,7 +421,7 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	content = createSegmentText(context, params)
 	
 	# Binary segments
-	if (params.get("binary", True)):
+	if (params.get("binary", False)):
 		import binaryxml
 		
 		content = binaryxml.from_string(content)

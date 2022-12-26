@@ -272,14 +272,14 @@ class sh_SceneProperties(PropertyGroup):
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
-		)
+	)
 	
 	sh_template: StringProperty(
 		name = "Template",
 		description = "The template paramater that is passed for the entire segment",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
-		)
+	)
 	
 	sh_softshadow: FloatProperty(
 		name = "Soft shadow",
@@ -287,7 +287,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = -0.001,
 		min = -0.001,
 		max = 1.0
-		)
+	)
 	
 	sh_vrmultiply: FloatProperty(
 		name = "Segment strech",
@@ -295,7 +295,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.75,
 		max = 4.0,
-		)
+	)
 	
 	sh_light_left: FloatProperty(
 		name = "Left",
@@ -303,7 +303,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 0.8,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_light_right: FloatProperty(
 		name = "Right",
@@ -311,7 +311,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 0.85,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_light_top: FloatProperty(
 		name = "Top",
@@ -319,7 +319,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 0.9,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_light_bottom: FloatProperty(
 		name = "Bottom",
@@ -327,7 +327,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 0.75,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_light_front: FloatProperty(
 		name = "Front",
@@ -335,7 +335,7 @@ class sh_SceneProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_light_back: FloatProperty(
 		name = "Back",
@@ -343,25 +343,25 @@ class sh_SceneProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.0,
 		max = 1.0,
-		)
+	)
 	
 	sh_menu_segment: BoolProperty(
 		name = "Menu segment mode",
 		description = "Treats the segment like it will appear on the main menu. Bakes faces that cannot be seen by the player",
 		default = False
-		)
+	)
 	
 	sh_ambient_occlusion: BoolProperty(
 		name = "Ambient occlusion",
 		description = "Enables ambient occlusion (per-vertex lighting)",
 		default = True
-		)
+	)
 	
 	sh_lighting: BoolProperty(
 		name = "Lighting",
 		description = "Enables some lighting features when baking the mesh",
 		default = False
-		)
+	)
 	
 	# Yes, I'm trying to add "DRM" support for this. It can barely be called that
 	# but I think it would fit the definition of DRM, despite not being very
@@ -371,7 +371,7 @@ class sh_SceneProperties(PropertyGroup):
 		name = "Disallow import",
 		description = "This will disallow importing the exported segment. It can very easily be bypassed, but might prevent a casual user from editing your segment without asking. Please use this feature wisely and consider providing Blender files for people who ask nicely",
 		default = False
-		)
+	)
 	
 	sh_lighting_ambient: FloatVectorProperty(
 		name = "Ambient",
@@ -398,6 +398,24 @@ class sh_SceneProperties(PropertyGroup):
 		default = (0.0, 0.0, 0.0), 
 		min = 0.0,
 		max = 1.0,
+	)
+	
+	sh_music: StringProperty(
+		name = "Music track",
+		description = "Name of the music file to play in quick test. The track must be in the apk. Default is to choose a random track",
+		default = "",
+	)
+	
+	sh_reverb: StringProperty(
+		name = "Reverb",
+		description = "Reverb parameters in quick test. No one knows what these do ‾\\_o_/‾",
+		default = "",
+	)
+	
+	sh_particles: StringProperty(
+		name = "Particles",
+		description = "The particles that appear when looking at the stage in quick test",
+		default = "",
 	)
 
 # Object (box/obstacle/powerup/decal/water) properties
@@ -820,6 +838,9 @@ class sh_SegmentPanel(Panel):
 		
 		layout.prop(sh_properties, "sh_fog_colour_top")
 		layout.prop(sh_properties, "sh_fog_colour_bottom")
+		layout.prop(sh_properties, "sh_music")
+		layout.prop(sh_properties, "sh_reverb")
+		layout.prop(sh_properties, "sh_particles")
 		
 		layout.prop(sh_properties, "sh_menu_segment")
 		layout.prop(sh_properties, "sh_ambient_occlusion")

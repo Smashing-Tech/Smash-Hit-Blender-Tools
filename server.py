@@ -14,26 +14,6 @@ CONTENT_LEVEL = """<level>
 	<room type="http://{}:8000/room?youare={}&amp;ignore=" distance="1000" start="true" end="true" />
 </level>"""
 
-CONTENT_ROOM = """function init()
-	mgMusic(tostring(math.random(0, 28)))
-	mgFogColor({})
-	
-	confSegment("http://{}:8000/segment?youare={}&filetype=", 1)
-	
-	l = 0
-	
-	local targetLen = 90
-	while l < targetLen do
-		s = nextSegment()
-		l = l + mgSegment(s, -l)
-	end
-	
-	mgLength(l)
-end
-
-function tick()
-end"""
-
 TEMPDIR = tempfile.gettempdir() + "/shbt-testserver/"
 
 def parsePath(url):
@@ -86,15 +66,56 @@ def log(*args):
 		f.write(content + "\n")
 		f.close()
 
-def getSegmentFogColour(path):
+def getSegmentOptions(path):
 	"""
-	Get the segment fog colour string
+	Get the segment fog colour, music, particles, reverb strings
 	
 	TODO: This would break if there are spacing errors. Unlikely, but maybe fix that?
 	"""
 	
 	root = et.fromstring(loadFileBytes(path).decode("utf-8"))
-	return root.attrib.get("fogcolor", "0 0 0 1 1 1").replace(" ", ", ")
+	
+	fog = root.attrib.get("fogcolor", "0 0 0 1 1 1").replace(" ", ", ")
+	music = root.attrib.get("qt-music", None)
+	particles = root.attrib.get("qt-particles", None)
+	reverb = root.attrib.get("qt-reverb", "").replace(" ", ", ")
+	
+	return {"fog": fog, "music": music, "particles": particles, "reverb": reverb}
+
+def generateRoomText(hostname, options):
+	"""
+	Generate the content for a room file
+	"""
+	
+	music = options["music"]
+	particles = options["particles"]
+	reverb = options["reverb"]
+	
+	music = ("\"" + music + "\"") if music else "tostring(math.random(0, 28))"
+	particles = (f"\n\tmgParticles(\"{particles}\")") if particles else ""
+	reverb = (f"\n\tmgReverb({reverb})") if reverb else ""
+	
+	room = f"""function init()
+	mgMusic({music})
+	mgFogColor({options["fog"]}){reverb}{particles}
+	
+	confSegment("http://{hostname}:8000/segment?youare={hostname}&filetype=", 1)
+	
+	l = 0
+	
+	local targetLen = 90
+	while l < targetLen do
+		s = nextSegment()
+		l = l + mgSegment(s, -l)
+	end
+	
+	mgLength(l)
+end
+
+function tick()
+end"""
+	
+	return bytes(room, "utf-8")
 
 class AdServer(BaseHTTPRequestHandler):
 	"""
@@ -114,16 +135,20 @@ class AdServer(BaseHTTPRequestHandler):
 		
 		# Handle what data to return
 		try:
+			### LEVEL ###
 			if (path.endswith("level")):
 				data = bytes(CONTENT_LEVEL.format(params["youare"], params["youare"]), "utf-8")
 			
+			### ROOM ###
 			elif (path.endswith("room")):
-				data = bytes(CONTENT_ROOM.format(getSegmentFogColour(TEMPDIR + "segment.xml"), params["youare"], params["youare"]), "utf-8")
+				data = generateRoomText(params["youare"], getSegmentOptions(TEMPDIR + "segment.xml"))
 				contenttype = "text/plain"
 			
+			### SEGMENT ###
 			elif (path.endswith("segment") and (params["filetype"] == ".xml")):
 				data = loadFileBytes(TEMPDIR + "segment.xml")
 			
+			### MESH ###
 			elif (path.endswith("segment") and (params["filetype"] == ".mesh")):
 				data = loadFileBytes(TEMPDIR + "segment.mesh")
 				contenttype = "application/octet-stream"
@@ -149,6 +174,11 @@ class AdServer(BaseHTTPRequestHandler):
 		log(" ------------------------------------------------------------- ")
 		log(format(data))
 		log("\n\n\n")
+
+def debug_generate_room():
+	f = open(TEMPDIR + "/room.lua", "wb")
+	f.write(generateRoomText("owo", getSegmentOptions(TEMPDIR + "segment.xml")))
+	f.close()
 
 def runServer():
 	"""
