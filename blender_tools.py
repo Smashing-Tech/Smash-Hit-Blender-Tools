@@ -955,6 +955,34 @@ class sh_ObstaclePanel(Panel):
 		
 		layout.separator()
 
+class sh_ShowMessage(Operator):
+	"""
+	Operator to show a message in the status bar (a report)
+	
+	TODO: It doesn't work!
+	"""
+	
+	bl_idname = "sh.show_message"
+	bl_label = "SHBT update message"
+	
+	message: StringProperty(
+		name = "Message to show",
+		description = "A message to show in the toast tray",
+		default = "Hello!! :3",
+	)
+	
+	@classmethod
+	def poll(self, context):
+		return True
+	
+	def execute(self, context):
+		bpy.ops.info.report({'WARNING'}, self.message)
+		return {'FINISHED'}
+	
+	def invoke(self, context, event):
+		self.message = "No message to show to you!"
+		return self.execute(context)
+
 def run_updater():
 	try:
 		global bl_info
@@ -969,6 +997,7 @@ classes = (
 	sh_SegmentPanel,
 	sh_ObstaclePanel,
 	sh_AddonPreferences,
+	sh_ShowMessage,
 	sh_export,
 	sh_export_gz,
 	sh_export_binary,
