@@ -5,7 +5,6 @@
 		"blender_version": [3, 0, 0],
 		"checksum": "7dbc6c8e8403afa54152b91a3e5ebc0cccae764b45ce4407b96a1bcfbec69ab0525592cf310662a5122569d84f42fff4",
 		"signature": null
-		
 	},
 	"prerelease": {
 		"version": [2, 0, 20],
@@ -14,4 +13,11 @@
 		"checksum": "nochecksumisavailable",
 		"signature": null
 	},
+	"checksumtest01": {
+		"version": [4, 2, 0],
+		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip",
+		"blender_version": [3, 0, 0],
+		"checksum": "7dbc6c8e8403afa54152b91a3e5ebc0cccae764b45ce4407b96a1bcfbec69ab0525592cf310662a5122569d84f42fff4",
+		"signature": null
+	}
 }
