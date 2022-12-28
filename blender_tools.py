@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 23),
+	"version": (2, 0, 24),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -300,7 +300,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_left: FloatProperty(
 		name = "Left",
 		description = "Light going on to the left side of boxes",
-		default = 0.8,
+		default = 1.0,
 		min = 0.0,
 		max = 1.0,
 	)
@@ -308,7 +308,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_right: FloatProperty(
 		name = "Right",
 		description = "Light going on to the right side of boxes",
-		default = 0.85,
+		default = 1.0,
 		min = 0.0,
 		max = 1.0,
 	)
@@ -316,7 +316,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_top: FloatProperty(
 		name = "Top",
 		description = "Light going on to the top side of boxes",
-		default = 0.9,
+		default = 1.0,
 		min = 0.0,
 		max = 1.0,
 	)
@@ -324,7 +324,7 @@ class sh_SceneProperties(PropertyGroup):
 	sh_light_bottom: FloatProperty(
 		name = "Bottom",
 		description = "Light going on to the bottom side of boxes",
-		default = 0.75,
+		default = 1.0,
 		min = 0.0,
 		max = 1.0,
 	)
