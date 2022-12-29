@@ -7,10 +7,10 @@
 		"signature": null
 	},
 	"prerelease": {
-		"version": [2, 0, 20],
-		"download": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.20-prerelease/shbt_2.0.20.zip",
+		"version": [2, 0, 24],
+		"download": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.24-prerelease/shbt_2.0.24.zip",
 		"blender_version": [3, 2, 0],
-		"checksum": "nochecksumisavailable",
+		"checksum": "d0a32455c5d8ba756ce86bc5dc43e53319cd8f4f8fc609884babf7a6d967d0e8f5d3b830f47cf51bb3bcbef2ac1bcd6d",
 		"signature": null
 	},
 	"checksumtest01": {
