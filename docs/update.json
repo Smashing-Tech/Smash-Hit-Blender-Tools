@@ -6,7 +6,7 @@
 	},
 	"prerelease": {
 		"version": [2, 0, 26],
-		"download": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.24-prerelease/shbt_2.0.26.zip",
+		"download": "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.26-prerelease/shbt_2.0.26.zip",
 		"blender_version": [3, 2, 0],
 		"checksum": "3bf195876a818b72012531848e69631987a7371ae8b46d4b2e7b8be750d7087fb362d0b96efee6e9f3fdaaf424efe045"
 	},
