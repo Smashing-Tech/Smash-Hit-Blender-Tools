@@ -22,9 +22,10 @@
 			<h1 class="post-navbar-padding">Privacy Statement</h1>
 			<p><b><i>This is not a legally binding document. It is for informational purposes only.</i></b></p>
 			<h3>Connection to external services</h3>
-			<p>Smash Hit™ Blender® Tools developers do not collect personal information unless you explicitly provide it to us; however, there are <b>some features of Blender Tools that connect to the internet</b> which may <b>collect personally identifiable information</b>:</p>
+			<p>Smash Hit™ Blender® Tools developers do not store personal information unless you explicitly provide it to us; however, there are <b>some features of Blender Tools that connect to the internet</b> which may <b>collect personally identifiable information</b>:</p>
 			<ul>
-				<li>The automatic update notifier <b>requests a file from GitHub servers</b> in some cases. Please see <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub's privacy statement</a>. You can also <a href="update.json">view the file that would be requested</a>.</li>
+				<li>The automatic updater <b>requests files from GitHub servers</b> in some cases. Please see <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub's privacy statement</a>.</li>
+				<li>You can also <a href="update.json">view the update info file</a>.</li>
 			</ul>
 			<h3>Hosting or creating local network services</h3>
 			<p>There are also features which require hosting a webserver, which <b>might be exposed to the public</b> if your network is configured incorrectly:</p>
@@ -34,7 +35,9 @@
 <!-- 			<p>Please keep in mind that the software used to run the webservers &mdash; Python's built-in web server &mdash; may have vulnerabilities that are outside of our control. In addition, you should note well that Python's server software is not built to optimise for security.</p> -->
 			<h3>Disabling parts of Blender Tools that use network connectivity</h3>
 			<p>It is possible to disable parts of Blender Tools that require network connections. Please see the below sections for information on how to disable these features.</p>
-			<h3>Disable the quick test server</h3>
+			<h3>Smash Hit Blender Tools version 2.1.0 and later</h3>
+			<p>Go to the Blender Addon Preferences (<code>Edit</code> → <code>Add ons</code>), then find Smash Hit Tools. You can find options to disable and enable the update notifier, the auto-updater and the quick test server.</p>
+			<h3>Disable the quick test server (before 2.1.0)</h3>
 			<p>If you would like to disable the quick test server:
 			<ul>
 				<li>find the Blender addons folder</li>
@@ -44,7 +47,7 @@
 				<li>save the file</li>
 			</ul>
 			<p>You will need to do this every time you update Blender Tools.</p>
-			<h3>Disable the update notifier</h3>
+			<h3>Disable the update notifier (before 2.1.0)</h3>
 			<p>If you would like to disable the update notifier:
 			<ul>
 				<li>find the Blender addons folder</li>
