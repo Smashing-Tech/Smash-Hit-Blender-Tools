@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 26, 0),
+	"version": (2, 1, 0),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -778,14 +778,14 @@ class sh_AddonPreferences(AddonPreferences):
 	
 	updater_channel: EnumProperty(
 		name = "Update channel",
-		description = "",
+		description = "The update channel controls how frequently you will recieve updates and new features, though new features may be initially buggy or incomplete",
 		items = [
 			('stable', "Stable", "Only gets new features sometimes, mostly bugfix updates"),
 			('prerelease', "Prerelease", "Prerelease version of the next stable version"),
 			('next', "Next", "Prerelease for the next major version of SHBT, likely has issues"),
-			('updatertest', "Updater test channel", "For developers to test if the updater is working properly"),
+			('updatertest', "Updater test channel", "For developers to test if the updater is working properly. DO NOT USE THIS CHANNEL!!! .."),
 		],
-		default = "prerelease", ### Change this depending on release ZIP type. ###
+		default = "stable", ### Change this depending on release ZIP type. ###
 	)
 	
 	enable_quick_test_server: BoolProperty(
