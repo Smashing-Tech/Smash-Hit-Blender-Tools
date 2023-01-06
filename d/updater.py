@@ -7,7 +7,6 @@ import bpy, functools
 import requests
 import json
 import rsa
-from pathlib import Path
 PublicKey = rsa.PublicKey
 
 from hashlib import sha3_384
@@ -25,10 +24,12 @@ class Update():
 	Class representing an update
 	"""
 	
-	def __init__(self, release_channel, version, download):
+	def __init__(self, release_channel, version, download, checksum, signature):
 		self.release_channel = release_channel
 		self.version = version
 		self.download = download
+		self.checksum = checksum
+		self.signature = signature
 
 def download_json(source):
 	"""
@@ -37,7 +38,16 @@ def download_json(source):
 	
 	return json.loads(requests.get(source).content)
 
-def download_update(source):
+def compute_checksum(data):
+	"""
+	Compute the checksum of some data
+	"""
+	
+	h = sha3_384()
+	h.update(data)
+	return h.hexdigest()
+
+def download_update(source, checksum, signature):
 	"""
 	Download an update
 	
@@ -123,7 +133,9 @@ def get_latest_version(current_version, release_channel):
 	Check the new version against the current version
 	"""
 	
-	return Update('testing', [2, 1, 0], "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.25-prerelease/shbt_2.0.25.zip")
+	# first is good checksum, second is bad
+	#return Update('stable', [2, 1, 0], "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip", "7dbc6c8e8403afa54152b91a3e5ebc0cccae764b45ce4407b96a1bcfbec69ab0525592cf310662a5122569d84f42fff4", "")
+	# return Update('stable', [2, 1, 0], "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.0/bt_2.0.0.zip", "7dbc6c8e8403afa54152b91a3e5eba0cccae764b45ce4407b96a1bcfbec69ab0525592cf310662a5122569d84f42fff4", "")
 	
 	try:
 		info = download_json(UPDATE_INFO).get(release_channel, None)
@@ -149,7 +161,7 @@ def get_latest_version(current_version, release_channel):
 			return None
 		
 		# Create the update object, if we need to use it
-		update = Update(release_channel, new_version, info["download"])
+		update = Update(release_channel, new_version, info["download"], info["checksum"], info["signature"])
 		
 		return update
 	
@@ -172,8 +184,8 @@ def check_for_updates(current_version):
 		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released! Download the ZIP file here: {update.download}"
 		
 		if (bpy.context.preferences.addons["blender_tools"].preferences.enable_auto_update):
-			download_update(update.download)
-			message = f"Smash Hit Tools update to v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been installed. Please restart Blender to see changes!"
+			download_update(update.download, update.checksum, update.signature)
+			message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released. The ZIP file has been downloaded to your SHBT folder, you just need to install it! (SHA3-384 checksum starts with: {update.checksum[0:8]})"
 		
 		print("Smash Hit Tools: " + message)
 		
