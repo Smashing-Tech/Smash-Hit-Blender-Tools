@@ -55,7 +55,7 @@ def download_update(source):
 		signature = requests.get(url + ".sig").content
 		
 		# Load the public key
-		public = eval(Path("./shbt-public.key").read_text())
+		public = eval(Path(BLENDER_TOOLS_PATH + "/shbt-public.key").read_text())
 		
 		# Verify the signature
 		try:
@@ -72,7 +72,7 @@ def download_update(source):
 		print("Smash Hit Tools: Downloaded latest update to " + path + ", preparing to extract.")
 		
 		# Extract the files (installs update)
-		shutil.unpack_archive(path, BLENDER_TOOLS_PATH + "/d", "zip")
+		shutil.unpack_archive(path, BLENDER_TOOLS_PATH, "zip")
 		
 		os._exit(0)
 	
