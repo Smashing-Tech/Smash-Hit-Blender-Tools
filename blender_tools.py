@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 25),
+	"version": (2, 0, 26),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -791,8 +791,7 @@ class sh_AddonPreferences(AddonPreferences):
 			ui.prop(self, "enable_auto_update")
 			if (self.enable_auto_update):
 				box = ui.box()
-				# box.label(icon = "ERROR", text = "Enabling the automatic updater means you won't be able to check that something contains a virus. We do not have the same security measures as other software to make sure that the software is coming from trusted developers. Please don't enable this option if you don't actually understand the risks.")
-				box.label(icon = "ERROR", text = "It's not recommended to enable this. Autoupdate is insecure.")
+				box.label(icon = "ERROR", text = "Please note: If a bad update is released, it might break SHBT. Be careful!")
 		ui.prop(self, "enable_quick_test_server")
 
 class sh_SegmentPanel(Panel):
