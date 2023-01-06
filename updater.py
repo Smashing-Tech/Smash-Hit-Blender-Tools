@@ -6,6 +6,8 @@ import common
 import bpy, functools
 import requests
 import json
+import rsa
+PublicKey = rsa.PublicKey
 
 from hashlib import sha3_384
 from bpy.types import (UILayout)
@@ -15,6 +17,7 @@ CHANNEL = common.CHANNEL
 UPDATE_INFO = common.UPDATE_INFO
 TOOLS_HOME_FOLDER = common.TOOLS_HOME_FOLDER
 LEGACY_UPDATE_MESSAGES = True
+BLENDER_TOOLS_PATH = common.BLENDER_TOOLS_PATH
 
 class Update():
 	"""
@@ -57,12 +60,17 @@ def download_update(source, checksum, signature):
 	def update_downloader(url):
 		import shutil, pathlib, os
 		
+		# Download data and signature
 		data = requests.get(url).content
-		new_checksum = compute_checksum(data)
+		signature = requests.get(url + ".sig").content
 		
-		# Make sure checksum is right!
-		if (checksum != new_checksum):
-			print(f"Checksum check failed: {checksum} != {new_checksum}")
+		# Load the public key
+		public = eval(Path("./shbt-public.key").read_text())
+		
+		# Verify the signature
+		try:
+			result = rsa.verify(data, signature, public)
+		except:
 			os._exit(0)
 		
 		# Get the local file path
@@ -71,8 +79,10 @@ def download_update(source, checksum, signature):
 		# Write the data
 		pathlib.Path(path).write_bytes(data)
 		
-		print("Smash Hit Tools: Downloaded latest update to " + path)
-		print("Please check it for malicous code then you can install it.")
+		print("Smash Hit Tools: Downloaded latest update to " + path + ", preparing to extract.")
+		
+		# Extract the files (installs update)
+		shutil.unpack_archive(path, BLENDER_TOOLS_PATH + "/d", "zip")
 		
 		os._exit(0)
 	
