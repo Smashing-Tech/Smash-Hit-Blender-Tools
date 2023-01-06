@@ -14,7 +14,6 @@ from hashlib import sha3_384
 from bpy.types import (UILayout)
 from multiprocessing import Process
 
-CHANNEL = common.CHANNEL
 UPDATE_INFO = common.UPDATE_INFO
 TOOLS_HOME_FOLDER = common.TOOLS_HOME_FOLDER
 LEGACY_UPDATE_MESSAGES = True
@@ -115,6 +114,17 @@ def check_version_lt(new_version, current_version):
 		elif (new_version[1] == current_version[1]):
 			if (new_version[2] > current_version[2]):
 				return True
+			elif (new_version[2] == current_version[2]):
+				# We used to not have four part versions
+				if (len(new_version) == 3 and len(current_version) == 3):
+					return False
+				elif (len(new_version) < len(current_version)):
+					return False
+				elif (len(new_version) > len(current_version)):
+					return True
+				else:
+					if (new_version[3] > current_version[3]):
+						return True
 	
 	return False
 
@@ -122,8 +132,6 @@ def get_latest_version(current_version, release_channel):
 	"""
 	Check the new version against the current version
 	"""
-	
-	return Update('testing', [2, 1, 0], "https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/releases/download/2.0.25-prerelease/shbt_2.0.25.zip")
 	
 	try:
 		info = download_json(UPDATE_INFO).get(release_channel, None)
@@ -166,7 +174,7 @@ def check_for_updates(current_version):
 	if (not bpy.context.preferences.addons["blender_tools"].preferences.enable_update_notifier):
 		return
 	
-	update = get_latest_version(current_version, CHANNEL)
+	update = get_latest_version(current_version, bpy.context.preferences.addons["blender_tools"].preferences.updater_channel)
 	
 	if (update != None):
 		message = f"Smash Hit Tools v{update.version[0]}.{update.version[1]}.{update.version[2]} (for {update.release_channel} branch) has been released! Download the ZIP file here: {update.download}"

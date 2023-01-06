@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 0, 26),
+	"version": (2, 0, 26, 0),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -765,15 +765,27 @@ class sh_AddonPreferences(AddonPreferences):
 	bl_idname = "blender_tools"
 	
 	enable_update_notifier: BoolProperty(
-		name = "Enable update notifier",
-		description = "Enables the update notifier. This will try to contact github, which may pose a privacy risk",
+		name = "Enable update checking",
+		description = "Enables checking for updates. This will try to contact github, which may pose a privacy risk",
 		default = True,
 	)
 	
 	enable_auto_update: BoolProperty(
 		name = "Enable automatic updates",
-		description = "Automatically downloads the newest version of Blender Tools. You still need to install it manually, and you should still check the website to make sure SHBT has not been cracked/hacked",
+		description = "Automatically downloads and installs the newest version of Blender Tools",
 		default = False,
+	)
+	
+	updater_channel: EnumProperty(
+		name = "Update channel",
+		description = "",
+		items = [
+			('stable', "Stable", "Only gets new features sometimes, mostly bugfix updates"),
+			('prerelease', "Prerelease", "Prerelease version of the next stable version"),
+			('next', "Next", "Prerelease for the next major version of SHBT, likely has issues"),
+			('updatertest', "Updater test channel", "For developers to test if the updater is working properly"),
+		],
+		default = "prerelease", ### Change this depending on release ZIP type. ###
 	)
 	
 	enable_quick_test_server: BoolProperty(
@@ -785,8 +797,9 @@ class sh_AddonPreferences(AddonPreferences):
 	def draw(self, context):
 		ui = self.layout
 		
-		ui.label(text = "Network and privacy settings")
+		# ui.label(text = "Network and privacy settings")
 		ui.prop(self, "enable_update_notifier")
+		ui.prop(self, "updater_channel")
 		if (self.enable_update_notifier):
 			ui.prop(self, "enable_auto_update")
 			if (self.enable_auto_update):

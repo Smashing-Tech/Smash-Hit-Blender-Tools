@@ -9,8 +9,7 @@ import os.path
 """
 Addon info
 
-HACK Does some very fuck yiff stuff from hell becuase blender is a little shit sometimes :D
-more specifically they only parse the AST for bl_info so we can't just define it here if it's
+HACK Blender only parses the AST for bl_info so we can't just define it here if it's
 not already cached, which it isn't for new installs
 """
 import dummy
@@ -31,11 +30,6 @@ Max length for property strings
 MAX_STRING_LENGTH = 512
 
 """
-Updater release channel
-"""
-CHANNEL = "prerelease"
-
-"""
 Update info URL
 """
 UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.json"
@@ -43,7 +37,7 @@ UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.js
 """
 Enable logging
 """
-PRINT_LOGGING = (CHANNEL != "stable")
+PRINT_LOGGING = True
 FILE_LOGGING = False
 
 """
