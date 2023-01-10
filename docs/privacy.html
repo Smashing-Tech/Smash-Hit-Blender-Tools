@@ -7,19 +7,29 @@
 		<title>Smash Hit™ Tools for Blender® &mdash; Privacy Statement</title>
 		<meta name="description" content="Smash Hit™ Blender® Tools is an addon for the 3D modeling software Blender that allows the creation of Smash Hit segments."/>
 		<meta name="keywords" content="Smash Hit, Modding, Blender, Level Editor, Segment Editor, Smash Hit Blender Tools, Carambola"/>
+		<script>
+			function decodeName(name) {
+				let result = atob(atob(name));
+				let place = document.getElementById("name-" + name);
+				
+				place.innerHTML = "" + result + "";
+			}
+		</script>
 	</head>
 	<body>
 		<div class="navbar-section">
-			<div class="cb-top-item"><img src="./icon.png" width="45px"/></div>
+			<div class="cb-top-item"><img src="./icon.png" height="64px"/></div>
 			<div class="cb-logo-item">Smash Hit Blender Tools</div>
-			<div class="cb-top-item"><a href="index.html">Home</a></div>
+			<div class="cb-top-item"><a href="./index.html">Home</a></div>
 			<div class="cb-top-item"><a href="https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/issues">Issues</a></div>
 			<div class="cb-top-item"><a href="https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/wiki">Wiki</a></div>
-			<div class="cb-top-item"><a href="https://www.youtube.com/playlist?list=PL9lOKwOG5hg6yscbrZwv4cXlM3tiHMrud">Videos</a></div>
-			<div class="cb-top-item"><a href="https://discord.gg/sJvZPcafyN">Discord</a></div>
+			<div class="cb-top-item"><a href="https://www.youtube.com/playlist?list=PL9lOKwOG5hg6yscbrZwv4cXlM3tiHMrud">Tutorials</a></div>
+			<div class="cb-top-item">|</div>
+			<div class="cb-top-item"><a href="https://youtube.com/@SmashHitLab">YouTube</a></div>
+			<div class="cb-top-item"><a href="https://discord.gg/7kra7Z3UNn">Discord</a></div>
 		</div>
 		<div class="main-section nc-top nc-bottom">
-			<h1 class="post-navbar-padding">Privacy Statement</h1>
+			<h1 class="post-navbar-padding">Privacy and Security Statement</h1>
 			<p><b><i>This is not a legally binding document. It is for informational purposes only.</i></b></p>
 			<h3>Connection to external services</h3>
 			<p>Smash Hit™ Blender® Tools developers do not store personal information unless you explicitly provide it to us; however, there are <b>some features of Blender Tools that connect to the internet</b> which may <b>collect personally identifiable information</b>:</p>
@@ -27,38 +37,52 @@
 				<li>The automatic updater <b>requests files from GitHub servers</b> in some cases. Please see <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement">GitHub's privacy statement</a>.</li>
 				<li>You can also <a href="update.json">view the update info file</a>.</li>
 			</ul>
+			<details>
+				<summary>Automatic update security issues reporting</summary>
+				<p>There has currently been no external security audit. If you find an issue or want to preform an audit, please report it to one of the following:</p>
+				<ul>
+					<li>Knot126 via Discord: <span id="name-UzI1dmRERXlOaU01TmpnMw" onclick="decodeName('UzI1dmRERXlOaU01TmpnMw')" style="cursor: pointer;">Click to see name</span></li>
+					<li>Knot126 via Email: <span id="name-WTJSa1pYQndjSEF5TlRZZ1cyRjBYU0JuYldGcGJDQmJaRzkwWFNCamIyMA" onclick="decodeName('WTJSa1pYQndjSEF5TlRZZ1cyRjBYU0JuYldGcGJDQmJaRzkwWFNCamIyMA')" style="cursor: pointer;">Click to see email</span></li>
+				</ul>
+				<p><b>If you send an email or DM about non-security related issues, you will most likely be blocked.</b> Please keep discussion public unless it is sensitive.</p>
+			</details>
 			<h3>Hosting or creating local network services</h3>
 			<p>There are also features which require hosting a webserver, which <b>might be exposed to the public</b> if your network is configured incorrectly:</p>
 			<ul>
 				<li>The quick test feature requires <b>hosting a webserver</b> which does not serve anything but files at semi-hardcoded file paths.</li>
 			</ul>
-<!-- 			<p>Please keep in mind that the software used to run the webservers &mdash; Python's built-in web server &mdash; may have vulnerabilities that are outside of our control. In addition, you should note well that Python's server software is not built to optimise for security.</p> -->
 			<h3>Disabling parts of Blender Tools that use network connectivity</h3>
 			<p>It is possible to disable parts of Blender Tools that require network connections. Please see the below sections for information on how to disable these features.</p>
-			<h3>Smash Hit Blender Tools version 2.1.0 and later</h3>
+			<h4>For version 2.1.0 and later</h4>
 			<p>Go to the Blender Addon Preferences (<code>Edit</code> → <code>Add ons</code>), then find Smash Hit Tools. You can find options to disable and enable the update notifier, the auto-updater and the quick test server.</p>
-			<h3>Disable the quick test server (before 2.1.0)</h3>
-			<p>If you would like to disable the quick test server:
-			<ul>
-				<li>find the Blender addons folder</li>
-				<li>open <code>blender_tools.py</code> in a text editor</li>
-				<li>find the line that says <code>g_process_test_server = True</code></li>
-				<li>replace <code>True</code> with <code>False</code></li>
-				<li>save the file</li>
-			</ul>
-			<p>You will need to do this every time you update Blender Tools.</p>
-			<h3>Disable the update notifier (before 2.1.0)</h3>
-			<p>If you would like to disable the update notifier:
-			<ul>
-				<li>find the Blender addons folder</li>
-				<li>open <code>common.py</code> in a text editor</li>
-				<li>find the line that says <code>UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.json"</code></li>
-				<li>replace the line with <code>UPDATE_INFO = ""</code></p></li>
-				<li>save the file</li>
-			</ul>
-			<p>You will need to do this every time you update Blender Tools.</p>
+			<h4>Previous versions</h4>
+			<p>Please see <a href="#disable-quick-test-and-or-updater-on-2-0-x">Disable Quick Test and/or Updater on 2.0.x</a>.</p>
+			<details id="disable-quick-test-and-or-updater-on-2-0-x">
+				<summary>Disable Quick Test and/or Updater on 2.0.x</summary>
+				<h3>Disable the quick test server (before 2.1.0)</h3>
+				<p>If you would like to disable the quick test server:
+				<ul>
+					<li>find the Blender addons folder</li>
+					<li>open <code>blender_tools.py</code> in a text editor</li>
+					<li>find the line that says <code>g_process_test_server = True</code></li>
+					<li>replace <code>True</code> with <code>False</code></li>
+					<li>save the file</li>
+				</ul>
+				<p>You will need to do this every time you update Blender Tools.</p>
+				<h3>Disable the update notifier (before 2.1.0)</h3>
+				<p>If you would like to disable the update notifier:
+				<ul>
+					<li>find the Blender addons folder</li>
+					<li>open <code>common.py</code> in a text editor</li>
+					<li>find the line that says <code>UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.json"</code></li>
+					<li>replace the line with <code>UPDATE_INFO = ""</code></p></li>
+					<li>save the file</li>
+				</ul>
+				<p>You will need to do this every time you update Blender Tools.</p>
+			</details>
 			<div class="bottom-section">
 				<p>Content on this page is available under the <a rel="license" href="https://creativecommons.org/licenses/by/4.0/legalcode">Creative Commons Attribution 4.0 International</a> licence.</p>
+				<p>Software Copyright &#169; 2020 &mdash; 2023 Knot126 and Smashing Tech. Website content Copyright &#169; 2021 &mdash; 2023 Knot126 and Smashing Tech.</p>
 				<p>Treadmark usage notices:</p>
 				<ul>
 					<li><a class="insecure-link" href="http://smashhitgame.com/">Smash Hit™</a> is a trademark of <a href="https://mediocre.se">Mediocre AB</a> and this project is not officially affiliated with Smash Hit™ or Mediocre AB in any way.</li>

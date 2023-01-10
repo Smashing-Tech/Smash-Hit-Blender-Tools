@@ -6,6 +6,8 @@
 	margin: 0;
 	padding: 0;
 	--main-colour: #0AFDEA;
+	--main-colour-bg: #002624;
+	--main-colour-bg-dark: #001917;
 	--font-face: "Titillium Web", sans-serif;
 }
 
@@ -53,13 +55,17 @@ a.insecure-link::after {
 	content: url("./lock_open.svg");
 }
 
+img {
+	padding: 0;
+}
+
 ::selection {
 	background: var(--main-colour);
 	color: #000;
 }
 
 body {
-	background: #002624;
+	background: var(--main-colour-bg);
 	color: #fff;
 }
 
@@ -74,14 +80,14 @@ body {
 
 /* Warning */
 .warning-main {
-	background: #000;
+	background: var(--main-colour-bg-dark);
 	border-radius: 0.5em;
 	overflow: auto;
 	padding: 0.5em;
 }
 
 .tip-main {
-	background: #000;
+	background: var(--main-colour-bg-dark);
 	border-radius: 0.5em;
 	overflow: auto;
 	padding: 0.5em;
@@ -107,9 +113,9 @@ body {
 }
 
 .navbar-section {
-	-webkit-backdrop-filter: blur(1.25em);
-	backdrop-filter: blur(1.25em);
-	background: #002624e0;
+/* 	-webkit-backdrop-filter: blur(1.25em); */
+/* 	backdrop-filter: blur(1.25em); */
+	background: var(--main-colour-bg-dark);
 	border: none;
 	padding: 1em;
 	position: fixed;
@@ -126,19 +132,15 @@ body {
 	padding: 0.5em;
 }
 
-@media (prefers-color-scheme: dark) {
-	.navbar-section {
-		background: #222a;
-		color: #fff;
-	}
-}
-
 .cb-top-item {
+	margin: 0;
+	padding: 0;
 	margin-right: 1.0em;
 	font-size: 14pt;
 	display: inline-block;
 	vertical-align: middle;
 	font-family: var(--font-face);
+	max-height: 64px; /* Why did this fix it? */
 }
 
 .cb-logo-item {
@@ -147,6 +149,7 @@ body {
 	display: inline-block;
 	vertical-align: middle;
 	font-family: var(--font-face);
+	color: var(--main-colour);
 }
 
 .nc-top {
@@ -191,22 +194,33 @@ body {
 	padding: 0.75em;
 }
 
+@keyframes glow {
+	from {
+		box-shadow: 0 0 2.5em var(--main-colour);
+	}
+	to {
+		box-shadow: 0 0 3.25em var(--main-colour);
+	}
+}
+
 .carambola-download-box {
 	padding: 1em;
 	border-radius: 0.5em;
 	background: var(--main-colour);
-/* 	box-shadow: 0 0.2em 0.4em #0000003f; */
 	color: #000;
 	cursor: pointer;
 	overflow: auto;
 	margin-bottom: 0.75em;
-	transition: background 0.3s;
-	transition: box-shadow 0.3s;
+	transition: box-shadow 0.3s, background 0.3s;
 }
 
 .carambola-download-box:hover {
 	background: #fff;
-	box-shadow: 0 0.3em 0.6em #0000002f;
+	animation-name: glow;
+	animation-duration: 3s;
+	animation-direction: alternate;
+	animation-iteration-count: infinite;
+	animation-timing-function: ease-in-out;
 }
 
 .carambola-download-box:active {
