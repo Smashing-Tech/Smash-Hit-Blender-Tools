@@ -238,6 +238,7 @@ def sh_add_object(level_root, scene, obj, params):
 	
 	# Add template for all types of objects
 	# HACK: We don't export with a template value if the visible attribute is checked. There is a bug somewhere in the meshbaker that I can't fix right now which causes this.
+	# NOTE I think it's fixed, but it's still pointless to export the template in this case.
 	if (obj.sh_properties.sh_template and ((not obj.sh_properties.sh_visible) or (sh_type != "BOX"))):
 		properties["template"] = obj.sh_properties.sh_template
 	
@@ -298,8 +299,7 @@ def sh_add_object(level_root, scene, obj, params):
 				properties["visible"] = "0"
 	
 	# Set tile info for boxes if visible and there is no template specified
-	if (sh_type == "BOX" and obj.sh_properties.sh_visible and not obj.sh_properties.sh_template):
-		
+	if (sh_type == "BOX" and obj.sh_properties.sh_visible):
 		# Depending on if colour per side is selected
 		if (not obj.sh_properties.sh_use_multitint):
 			properties["color"] = str(obj.sh_properties.sh_tint[0]) + " " + str(obj.sh_properties.sh_tint[1]) + " " + str(obj.sh_properties.sh_tint[2])
@@ -311,12 +311,12 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["tile"] = str(obj.sh_properties.sh_tile)
 		else:
 			properties["tile"] = str(obj.sh_properties.sh_tile1) + " " + str(obj.sh_properties.sh_tile2) + " " + str(obj.sh_properties.sh_tile3)
-	
-	# tileSize and tileRot for boxes
-	if (sh_type == "BOX"):
+		
+		# Tile size for boxes
 		if (obj.sh_properties.sh_tilesize[0] != 1.0 or obj.sh_properties.sh_tilesize[1] != 1.0 or obj.sh_properties.sh_tilesize[2] != 1.0):
 			properties["tileSize"] = str(obj.sh_properties.sh_tilesize[0]) + " " + str(obj.sh_properties.sh_tilesize[1]) + " " + str(obj.sh_properties.sh_tilesize[2])
 		
+		# Tile rotation
 		if (obj.sh_properties.sh_tilerot[1] > 0.0 or obj.sh_properties.sh_tilerot[2] > 0.0 or obj.sh_properties.sh_tilerot[0] > 0.0):
 			properties["tileRot"] = str(obj.sh_properties.sh_tilerot[0]) + " " + str(obj.sh_properties.sh_tilerot[1]) + " " + str(obj.sh_properties.sh_tilerot[2])
 	
