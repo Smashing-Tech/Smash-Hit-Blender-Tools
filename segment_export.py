@@ -237,7 +237,8 @@ def sh_add_object(level_root, scene, obj, params):
 			properties["rot"] = str(obj.rotation_euler[1]) + " " + str(obj.rotation_euler[2]) + " " + str(obj.rotation_euler[0])
 	
 	# Add template for all types of objects
-	if (obj.sh_properties.sh_template):
+	# HACK: We don't export with a template value if the visible attribute is checked. There is a bug somewhere in the meshbaker that I can't fix right now which causes this.
+	if (obj.sh_properties.sh_template and ((not obj.sh_properties.sh_visible) or (sh_type != "BOX"))):
 		properties["template"] = obj.sh_properties.sh_template
 	
 	# Add mode appearance tag
