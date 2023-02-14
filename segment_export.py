@@ -171,7 +171,7 @@ def sh_create_root(scene, params):
 		seg_props["qt-reverb"] = scene.sh_reverb
 	
 	# Particle effect
-	if (scene.sh_reverb):
+	if (scene.sh_particles):
 		seg_props["qt-particles"] = scene.sh_particles
 	
 	# Protection
