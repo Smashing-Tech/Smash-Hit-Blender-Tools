@@ -1,12 +1,12 @@
 {
 	"stable": {
-		"version": [2, 1, 1],
-		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.1.1/shbt_2.1.1.zip",
+		"version": [2, 1, 2],
+		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.1.2/shbt_2.1.2.zip",
 		"blender_version": [3, 2, 0]
 	},
 	"prerelease": {
-		"version": [2, 1, 1],
-		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.1.1/shbt_2.1.1.zip",
+		"version": [2, 1, 2],
+		"download": "https://github.com/smashing-tech/Smash-Hit-Blender-Tools/releases/download/2.1.2/shbt_2.1.2.zip",
 		"blender_version": [3, 2, 0]
 	},
 	"next": {
