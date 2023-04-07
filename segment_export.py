@@ -10,7 +10,6 @@ import os
 import os.path as ospath
 import pathlib
 import tempfile
-import bake_mesh
 import obstacle_db
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
@@ -340,7 +339,7 @@ def sh_add_object(level_root, scene, obj, params):
 	if (params["isLast"]): # Fixes the issues with the last line of the file
 		el.tail = "\n"
 	
-	if (params.get("sh_box_bake_mode", "Mesh") == "StoneHack" and sh_type == "BOX" and obj.sh_properties.sh_visible):
+	if (params.get("sh_box_bake_mode", "Mesh") == "Obstacle" and sh_type == "BOX" and obj.sh_properties.sh_visible):
 		"""
 		Export a fake obstacle that will represent stone in the level.
 		"""
@@ -409,9 +408,6 @@ def createSegmentText(context, params):
 	
 	return content
 
-def MB_progress_update_callback(value):
-	bpy.context.window_manager.progress_update(value)
-
 def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	"""
 	This function exports the blender scene to a Smash Hit compatible XML file.
@@ -446,17 +442,6 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 		if (ospath.exists(tempdir + "/segment.mesh")):
 			os.remove(tempdir + "/segment.mesh")
 		
-		context.window_manager.progress_begin(0.0, 1.0)
-		
-		# Write mesh if needed
-		if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
-			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
-			bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
-			bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
-			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None), bake_mesh.BakeProgressInfo(MB_progress_update_callback))
-		
-		context.window_manager.progress_end()
-		
 		# Write XML
 		with open(tempdir + "/segment.xml", "w") as f:
 			f.write(content)
@@ -470,25 +455,6 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	##
 	
 	# TODO: Split into function exportSegmentNormal
-	
-	# Cook the mesh if we need to
-	if (params.get("sh_box_bake_mode", "Mesh") == "Mesh"):
-		# Find file name
-		meshfile = ospath.splitext(ospath.splitext(filepath)[0])[0]
-		if (compress):
-			meshfile = ospath.splitext(meshfile)[0]
-		meshfile += ".mesh.mp3"
-		
-		# Set properties
-		# (TODO: maybe this should be passed to the function instead of just setting global vars?)
-		bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
-		bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
-		bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
-		
-		# Bake mesh
-		bake_mesh.bakeMeshToFile(content, meshfile, (params["sh_meshbake_template"] if params["sh_meshbake_template"] else None), bake_mesh.BakeProgressInfo(MB_progress_update_callback))
-	
-	context.window_manager.progress_update(0.8)
 	
 	# Write out file
 	if (not compress):

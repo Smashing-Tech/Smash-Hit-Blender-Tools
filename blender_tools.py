@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Tools",
 	"description": "Segment exporter and property editor for Smash Hit",
 	"author": "Smashing Tech",
-	"version": (2, 1, 3),
+	"version": (2, 99, 0),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -268,7 +268,7 @@ class sh_SceneProperties(PropertyGroup):
 		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
 		items = [ 
 			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
-			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
+			('Obstacle', "Obstacle", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported; there are no textures"),
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
@@ -295,6 +295,12 @@ class sh_SceneProperties(PropertyGroup):
 		default = 1.0,
 		min = 0.75,
 		max = 4.0,
+	)
+	
+	sh_basic_lighting: BoolProperty(
+		name = "Basic lighting",
+		description = "Enabling this allows you to edit per-side lighting multipliers. Otherwise, nice-looking defaults will be used",
+		default = False
 	)
 	
 	sh_light_left: FloatProperty(
@@ -358,8 +364,8 @@ class sh_SceneProperties(PropertyGroup):
 	)
 	
 	sh_lighting: BoolProperty(
-		name = "Lighting",
-		description = "Enables some lighting features when baking the mesh",
+		name = "Advanced lighting",
+		description = "This enables some extra lighting features when baking the mesh that can help make the scene more realistic",
 		default = False
 	)
 	
@@ -371,6 +377,33 @@ class sh_SceneProperties(PropertyGroup):
 		name = "Disallow import",
 		description = "This will disallow importing the exported segment. It can very easily be bypassed, but might prevent a casual user from editing your segment without asking. Please use this feature wisely and consider providing Blender files for people who ask nicely",
 		default = False
+	)
+	
+	sh_drm_encrypt: BoolProperty(
+		name = "Encrypt segment",
+		description = "This will encrpyt the segment with a weak encrpyt algorithm that still prevents using it in other mods. You need to adjust the password and enable segment encryption in libsmashhit.so for this to work fully",
+		default = False
+	)
+	
+	sh_drm_password: StringProperty(
+		name = "Password",
+		description = "The password to encrypt with, this should be random symbols that you don't use anywhere else",
+		default = "5m45hh1t41ght",
+		maxlen = SH_MAX_STR_LEN,
+	)
+	
+	sh_procgen_decor: BoolProperty(
+		name = "Automatic details",
+		description = "Automatically generate extra details based on a random seed",
+		default = False
+	)
+	
+	sh_procgen_seed: IntProperty(
+		name = "Seed",
+		description = "The seed to use for automatic decor",
+		default = 0,
+		min = 0,
+		max = 2147483647,
 	)
 	
 	sh_lighting_ambient: FloatVectorProperty(
@@ -827,36 +860,60 @@ class sh_SegmentPanel(Panel):
 		# layout.prop(sh_properties, "sh_room")
 		# layout.prop(sh_properties, "sh_segment")
 		
-		layout.prop(sh_properties, "sh_len")
-		layout.prop(sh_properties, "sh_box_bake_mode")
-		layout.prop(sh_properties, "sh_template")
-		layout.prop(sh_properties, "sh_softshadow")
-		layout.prop(sh_properties, "sh_vrmultiply")
-		
 		sub = layout.box()
-		sub.label(text = "Light", icon = "LIGHT")
-		sub.label(text = "Basic lighting")
-		sub.prop(sh_properties, "sh_light_right")
-		sub.prop(sh_properties, "sh_light_left")
-		sub.prop(sh_properties, "sh_light_top")
-		sub.prop(sh_properties, "sh_light_bottom")
-		sub.prop(sh_properties, "sh_light_front")
-		sub.prop(sh_properties, "sh_light_back")
+		sub.label(text = "Segment data", icon = "SCENE_DATA")
+		sub.prop(sh_properties, "sh_len")
+		sub.prop(sh_properties, "sh_box_bake_mode")
+		sub.prop(sh_properties, "sh_template")
+		sub.prop(sh_properties, "sh_softshadow")
+		sub.prop(sh_properties, "sh_vrmultiply")
 		
-		sub.label(text = "Advanced lighting")
-		sub.prop(sh_properties, "sh_lighting")
-		if (sh_properties.sh_lighting):
-			sub.prop(sh_properties, "sh_lighting_ambient")
+		if (sh_properties.sh_box_bake_mode == "Mesh"):
+			# Lighting
+			sub = layout.box()
+			sub.label(text = "Light", icon = "LIGHT")
+			sub.prop(sh_properties, "sh_basic_lighting")
+			if (sh_properties.sh_basic_lighting):
+				sub.prop(sh_properties, "sh_light_right")
+				sub.prop(sh_properties, "sh_light_left")
+				sub.prop(sh_properties, "sh_light_top")
+				sub.prop(sh_properties, "sh_light_bottom")
+				sub.prop(sh_properties, "sh_light_front")
+				sub.prop(sh_properties, "sh_light_back")
+			
+			sub.prop(sh_properties, "sh_lighting")
+			if (sh_properties.sh_lighting):
+				sub.prop(sh_properties, "sh_lighting_ambient")
+			
+			# Mesh settings
+			sub = layout.box()
+			sub.label(text = "Meshes", icon = "MESH_DATA")
+			sub.prop(sh_properties, "sh_menu_segment")
+			sub.prop(sh_properties, "sh_ambient_occlusion")
 		
-		layout.prop(sh_properties, "sh_fog_colour_top")
-		layout.prop(sh_properties, "sh_fog_colour_bottom")
-		layout.prop(sh_properties, "sh_music")
-		layout.prop(sh_properties, "sh_reverb")
-		layout.prop(sh_properties, "sh_particles")
+		# Quick test
+		sub = layout.box()
+		sub.label(text = "Quick test", icon = "AUTO")
+		sub.prop(sh_properties, "sh_fog_colour_top")
+		sub.prop(sh_properties, "sh_fog_colour_bottom")
+		sub.prop(sh_properties, "sh_music")
+		sub.prop(sh_properties, "sh_reverb")
+		sub.prop(sh_properties, "sh_particles")
 		
-		layout.prop(sh_properties, "sh_menu_segment")
-		layout.prop(sh_properties, "sh_ambient_occlusion")
-		layout.prop(sh_properties, "sh_drm_disallow_import")
+		# Automatic procgen of content
+		sub = layout.box()
+		sub.label(text = "Content generation", icon = "MATERIAL_DATA")
+		sub.prop(sh_properties, "sh_procgen_decor")
+		if (sh_properties.sh_procgen_decor):
+			sub.prop(sh_properties, "sh_procgen_seed")
+		
+		# DRM
+		sub = layout.box()
+		sub.label(text = "Protection", icon = "LOCKED")
+		sub.prop(sh_properties, "sh_drm_disallow_import")
+		sub.prop(sh_properties, "sh_drm_encrypt")
+		if (sh_properties.sh_drm_encrypt):
+			sub.prop(sh_properties, "sh_drm_password")
 		
 		layout.separator()
 
