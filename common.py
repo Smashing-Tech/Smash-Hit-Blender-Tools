@@ -32,7 +32,7 @@ MAX_STRING_LENGTH = 512
 """
 Update info URL
 """
-UPDATE_INFO = "https://smashing-tech.github.io/Smash-Hit-Blender-Tools/update.json"
+UPDATE_INFO = "https://raw.githubusercontent.com/Smashing-Tech/SHBT-Meta/trunk/update.json"
 
 """
 Enable logging
