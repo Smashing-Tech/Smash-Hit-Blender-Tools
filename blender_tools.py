@@ -4,6 +4,7 @@ Smash Hit segment export tool for Blender - main file
 This mostly handles UI stuff
 """
 
+import reporting
 import common
 
 SH_MAX_STR_LEN = common.MAX_STRING_LENGTH
@@ -806,6 +807,12 @@ class sh_AddonPreferences(AddonPreferences):
 	enable_auto_update: BoolProperty(
 		name = "Enable automatic updates",
 		description = "Automatically downloads and installs the newest version of Blender Tools",
+		default = False,
+	)
+	
+	enable_telemetry: BoolProperty(
+		name = "Telemetry (FOR PRERELEASE ONLY)",
+		description = "This will enable telemetry for this prerelease of blender tools. The only data sent is the timestamp and backtrace or info about an error when one occurs",
 		default = False,
 	)
 	
