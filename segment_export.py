@@ -246,11 +246,11 @@ def sh_add_object(level_root, scene, obj, params):
 	if (sh_type == "OBS"):
 		mask = 0b0
 		
-		for v in [("training", 1), ("classic", 2), ("expert", 4), ("zen", 8), ("versus", 16), ("coop", 32)]:
+		for v in [("training", 1), ("classic", 2), ("expert", 4), ("versus", 16), ("coop", 32)]:
 			if (v[0] in obj.sh_properties.sh_mode):
 				mask |= v[1]
 		
-		if (mask != 0b111111):
+		if (mask != 0b110111):
 			properties["mode"] = str(mask)
 	
 	# Add reflection property for boxes if not default

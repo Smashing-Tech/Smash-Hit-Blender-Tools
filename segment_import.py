@@ -54,7 +54,7 @@ def sh_import_modes(s):
 	mask = int(s)
 	res = set()
 	
-	for v in [("training", 1), ("classic", 2), ("expert", 4), ("zen", 8), ("versus", 16), ("coop", 32)]:
+	for v in [("training", 1), ("classic", 2), ("expert", 4), ("versus", 16), ("coop", 32)]:
 		if ((mask & v[1]) == v[1]):
 			res.add(v[0])
 	
@@ -271,7 +271,7 @@ def sh_import_segment(fp, context, compressed = False):
 			o.sh_properties.sh_type = "OBS"
 			o.sh_properties.sh_obstacle = properties.get("type", "")
 			o.sh_properties.sh_template = properties.get("template", "")
-			o.sh_properties.sh_mode = sh_import_modes(properties.get("mode", "63"))
+			o.sh_properties.sh_mode = sh_import_modes(properties.get("mode", "55"))
 			o.sh_properties.sh_param0 = properties.get("param0", "")
 			o.sh_properties.sh_param1 = properties.get("param1", "")
 			o.sh_properties.sh_param2 = properties.get("param2", "")
