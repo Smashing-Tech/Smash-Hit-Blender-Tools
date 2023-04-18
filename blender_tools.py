@@ -500,13 +500,12 @@ class sh_EntityProperties(PropertyGroup):
 		description = "The game modes in which this obstacle should appear",
 		items = [
 			('training', "Training", "The easiest game mode which removes randomisation", 1),
-			('classic', "Classic", "The primary game mode in Smash Hit", 2),
+			('classic', "Classic/Zen", "The primary game mode in Smash Hit/A relaxing sandbox mode which removes hit detection", 2),
 			('expert', "Mayhem", "The harder version of classic mode, with boss fights", 4),
-			('zen', "Zen", "A relaxing sandbox mode which removes hit detection", 8),
 			('versus', "Versus", "Two player versus mode where each player has their own ball count", 16),
 			('coop', "Co-op", "Two player co-op mode where both players share a ball count", 32),
 		],
-		default = {'training', 'classic', 'expert', 'zen', 'versus', 'coop'},
+		default = {'training', 'classic', 'expert', 'versus', 'coop'},
 		)
 	
 	##################
