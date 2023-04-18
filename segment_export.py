@@ -250,7 +250,7 @@ def sh_add_object(level_root, scene, obj, params):
 			if (v[0] in obj.sh_properties.sh_mode):
 				mask |= v[1]
 		
-		if (mask != 0b111111):
+		if (mask != 0b110111):
 			properties["mode"] = str(mask)
 	
 	# Add reflection property for boxes if not default
