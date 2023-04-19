@@ -8,7 +8,7 @@ import common
 
 SH_MAX_STR_LEN = common.MAX_STRING_LENGTH
 bl_info = {
-	"name": "Smash Hit Tools",
+	"name": "Smash Hit Blender Tools",
 	"description": "Blender-based tools for editing, saving and loading Smash Hit segments",
 	"author": "Smash Hit Lab",
 	"version": (2, 1, 3),
