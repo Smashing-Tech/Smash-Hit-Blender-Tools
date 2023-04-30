@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Blender Tools",
 	"description": "Blender-based tools for editing, saving and loading Smash Hit segments",
 	"author": "Smash Hit Lab",
-	"version": (2, 1, 3),
+	"version": (2, 1, 4),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
