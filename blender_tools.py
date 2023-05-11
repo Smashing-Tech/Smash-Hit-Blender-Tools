@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Blender Tools",
 	"description": "Blender-based tools for editing, saving and loading Smash Hit segments",
 	"author": "Smash Hit Lab",
-	"version": (2, 1, 4),
+	"version": (2, 1, 5),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -122,6 +122,36 @@ class sh_export_gz(sh_ExportCommon):
 
 def sh_draw_export_gz(self, context):
 	self.layout.operator("sh.export_compressed", text="Compressed Segment (.xml.gz.mp3)")
+
+class sh_export_auto(bpy.types.Operator):
+	"""
+	Auto find APK path and use level/room/segment name to export
+	"""
+	
+	bl_idname = "sh.export_auto"
+	bl_label = "Export to APK"
+	
+	def execute(self, context):
+		sh_properties = context.scene.sh_properties
+		
+		result = segment_export.sh_export_segment(
+			None,
+			context,
+			compress = True,
+			params = {
+				"sh_vrmultiply": sh_properties.sh_vrmultiply,
+				"sh_box_bake_mode": sh_properties.sh_box_bake_mode,
+				"sh_meshbake_template": segment_export.tryTemplatesPath(),
+				"bake_menu_segment": sh_properties.sh_menu_segment,
+				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
+				"lighting_enabled": sh_properties.sh_lighting,
+			}
+		)
+		
+		return result
+
+def sh_draw_export_auto(self, context):
+	self.layout.operator("sh.export_auto", text="Export to APK")
 
 class sh_export_test(Operator):
 	"""
@@ -235,21 +265,21 @@ class sh_SceneProperties(PropertyGroup):
 	
 	sh_level: StringProperty(
 		name = "Level name",
-		description = "The name of the checkpoint that this segment belongs to. The checkpoints will go in alphabetical order, so it's recommended to prefix with 0_, 1_, 2_, etc",
+		description = "The name of the checkpoint that this segment belongs to.",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_room: StringProperty(
 		name = "Room name",
-		description = "The name of the room that this segment belongs to. The rooms will go in alphabetical order, so it's recommended to prefix with 0_, 1_, 2_, etc",
+		description = "The name of the room that this segment belongs to.",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
 	
 	sh_segment: StringProperty(
 		name = "Segment name",
-		description = "The name of this segment. You don't need to prefix this because the order will be random",
+		description = "The name of this segment",
 		default = "",
 		maxlen = SH_MAX_STR_LEN,
 		)
@@ -831,9 +861,9 @@ class sh_SegmentPanel(Panel):
 		scene = context.scene
 		sh_properties = scene.sh_properties
 		
-		# layout.prop(sh_properties, "sh_level")
-		# layout.prop(sh_properties, "sh_room")
-		# layout.prop(sh_properties, "sh_segment")
+		layout.prop(sh_properties, "sh_level")
+		layout.prop(sh_properties, "sh_room")
+		layout.prop(sh_properties, "sh_segment")
 		
 		layout.prop(sh_properties, "sh_len")
 		layout.prop(sh_properties, "sh_box_bake_mode")
@@ -1041,6 +1071,7 @@ classes = (
 	sh_ShowMessage,
 	sh_export,
 	sh_export_gz,
+	sh_export_auto,
 	sh_export_binary,
 	sh_export_test,
 	sh_import,
@@ -1059,6 +1090,7 @@ def register():
 	# Add the export operator to menu
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_gz)
+	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_auto)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_binary)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_test)
 	

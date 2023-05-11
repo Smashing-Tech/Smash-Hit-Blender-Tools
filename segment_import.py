@@ -141,7 +141,7 @@ def sh_import_segment(fp, context, compressed = False):
 		
 		for d in drm:
 			if (d == "NoImport"):
-				show_message("Import error", "There was an error importing this segment.")
+				show_message("Import error", "The creator of this segment has requested that it not be imported. We encourage you to respect this request.")
 				return {"FINISHED"}
 	
 	# Segment length

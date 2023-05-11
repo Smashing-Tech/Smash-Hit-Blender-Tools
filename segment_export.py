@@ -12,6 +12,7 @@ import pathlib
 import tempfile
 import bake_mesh
 import obstacle_db
+import util
 
 from bpy.props import (StringProperty, BoolProperty, IntProperty, IntVectorProperty, FloatProperty, FloatVectorProperty, EnumProperty, PointerProperty)
 from bpy.types import (Panel, Menu, Operator, PropertyGroup)
@@ -182,7 +183,14 @@ def sh_create_root(scene, params):
 	creator = bpy.context.preferences.addons["blender_tools"].preferences.creator
 	
 	if (creator):
-		seg_props["creator"] = creator
+		seg_props["shbt-meta-creator"] = creator
+	
+	# Export time
+	seg_props["shbt-meta-time"] = hex(util.get_time())[2:]
+	
+	# Export user trace if the creator wasn't specified
+	if (not creator):
+		seg_props["shbt-meta-trace"] = util.get_trace()
 	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
@@ -423,8 +431,29 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	This function exports the blender scene to a Smash Hit compatible XML file.
 	"""
 	
+	# Set wait cursor
 	context.window.cursor_set('WAIT')
 	
+	# If the filepath is None, then find it from the apk and force enable
+	# compression
+	if (filepath == None):
+		props = context.scene.sh_properties
+		
+		filepath = util.find_apk()
+		
+		if (not filepath):
+			raise FileNotFoundError("There is currently no APK open in APK Editor Studio. Please open a Smash Hit APK with a valid structure and try again.")
+		
+		if (not props.sh_level or not props.sh_room or not props.sh_segment):
+			raise FileNotFoundError("You have not set one of the level, room or segment name properties needed to use auto export to apk feature. Please set these in the scene tab and try again.")
+		
+		filepath += "/segments/" + props.sh_level + "/" + props.sh_room + "/" + props.sh_segment + ".xml.gz.mp3"
+		
+		util.prepare_folders(filepath)
+		
+		compress = True
+	
+	# Export to xml string
 	content = createSegmentText(context, params)
 	
 	# Binary segments
