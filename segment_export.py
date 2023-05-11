@@ -178,6 +178,12 @@ def sh_create_root(scene, params):
 	if (scene.sh_drm_disallow_import):
 		seg_props["drm"] = "NoImport"
 	
+	# Creator information
+	creator = bpy.context.preferences.addons["blender_tools"].preferences.creator
+	
+	if (creator):
+		seg_props["creator"] = creator
+	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
 	level_root.text = "\n\t"

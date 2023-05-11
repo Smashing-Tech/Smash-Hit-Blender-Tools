@@ -793,10 +793,19 @@ class sh_AddonPreferences(AddonPreferences):
 		default = True,
 	)
 	
+	creator: StringProperty(
+		name = "Creator name",
+		description = "(Optional) The name that you want to be known as in the creator feild of the segment",
+		default = "",
+	)
+	
 	def draw(self, context):
 		ui = self.layout
 		
-		# ui.label(text = "Network and privacy settings")
+		ui.label(text = "Segment export")
+		ui.prop(self, "creator")
+		
+		ui.label(text = "Network and privacy")
 		ui.prop(self, "enable_update_notifier")
 		ui.prop(self, "updater_channel")
 		if (self.enable_update_notifier):
