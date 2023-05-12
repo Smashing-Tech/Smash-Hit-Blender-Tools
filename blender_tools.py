@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Blender Tools",
 	"description": "Blender-based tools for editing, saving and loading Smash Hit segments",
 	"author": "Smash Hit Lab",
-	"version": (2, 1, 5),
+	"version": (2, 1, 6),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -151,7 +151,7 @@ class sh_export_auto(bpy.types.Operator):
 		return result
 
 def sh_draw_export_auto(self, context):
-	self.layout.operator("sh.export_auto", text="Export to APK")
+	self.layout.operator("sh.export_auto", text="SHBT: Export to APK")
 
 class sh_export_test(Operator):
 	"""
@@ -181,7 +181,7 @@ class sh_export_test(Operator):
 		return result
 
 def sh_draw_export_test(self, context):
-	self.layout.operator("sh.export_test_server", text="SHBT Quick Test Server")
+	self.layout.operator("sh.export_test_server", text="SHBT: Quick Test Server")
 
 class sh_export_binary(sh_ExportCommon):
 	"""
@@ -829,10 +829,17 @@ class sh_AddonPreferences(AddonPreferences):
 		default = "",
 	)
 	
+	enable_metadata: BoolProperty(
+		name = "Export metadata",
+		description = "Allows exporting metadata with the segment, like the time it was created and a user trace or ID",
+		default = True,
+	)
+	
 	def draw(self, context):
 		ui = self.layout
 		
 		ui.label(text = "Segment export")
+		ui.prop(self, "enable_metadata")
 		ui.prop(self, "creator")
 		
 		ui.label(text = "Network and privacy")
@@ -1091,7 +1098,7 @@ def register():
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_gz)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_auto)
-	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_binary)
+	# bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_binary)
 	bpy.types.TOPBAR_MT_file_export.append(sh_draw_export_test)
 	
 	# Add import operators to menu

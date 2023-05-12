@@ -179,18 +179,20 @@ def sh_create_root(scene, params):
 	if (scene.sh_drm_disallow_import):
 		seg_props["drm"] = "NoImport"
 	
-	# Creator information
+	# Creator information - always exported if available
 	creator = bpy.context.preferences.addons["blender_tools"].preferences.creator
 	
 	if (creator):
 		seg_props["shbt-meta-creator"] = creator
 	
-	# Export time
-	seg_props["shbt-meta-time"] = hex(util.get_time())[2:]
-	
-	# Export user trace if the creator wasn't specified
-	if (not creator):
-		seg_props["shbt-meta-trace"] = util.get_trace()
+	# Metadata, if allowed
+	if (bpy.context.preferences.addons["blender_tools"].preferences.enable_metadata):
+		# Export time
+		seg_props["shbt-meta-time"] = hex(util.get_time())[2:]
+		
+		# Export user trace if the creator wasn't specified
+		if (not creator):
+			seg_props["shbt-meta-trace"] = util.get_trace()
 	
 	# Create main root and return it
 	level_root = et.Element("segment", seg_props)
