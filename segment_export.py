@@ -438,7 +438,7 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	
 	# If the filepath is None, then find it from the apk and force enable
 	# compression
-	if (filepath == None):
+	if (filepath == None and params.get("auto_find_filepath", False)):
 		props = context.scene.sh_properties
 		
 		filepath = util.find_apk()
