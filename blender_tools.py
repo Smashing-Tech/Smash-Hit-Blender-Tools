@@ -11,7 +11,7 @@ bl_info = {
 	"name": "Smash Hit Blender Tools",
 	"description": "Blender-based tools for editing, saving and loading Smash Hit segments",
 	"author": "Smash Hit Lab",
-	"version": (2, 1, 6),
+	"version": (2, 1, 7),
 	"blender": (3, 2, 0),
 	"location": "File > Import/Export and 3D View > Tools",
 	"warning": "",
@@ -145,6 +145,7 @@ class sh_export_auto(bpy.types.Operator):
 				"bake_menu_segment": sh_properties.sh_menu_segment,
 				"bake_vertex_light": sh_properties.sh_ambient_occlusion,
 				"lighting_enabled": sh_properties.sh_lighting,
+				"auto_find_filepath": True,
 			}
 		)
 		
