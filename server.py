@@ -179,7 +179,11 @@ def makeTestFiles():
 	pathlib.Path(TEMPDIR + "segment.xml").write_text('<segment size="12 10 16"><box pos="0 -1 -1" size="0.5 0.5 0.5" visible="1" color="0.3 0.6 0.9" tile="63"/></segment>')
 	
 	# Cook mesh for it
-	os.system(f"python3 ./bake_mesh.py {TEMPDIR + 'segment.xml'} {TEMPDIR + 'segment.mesh'}")
+	r = os.system(f"python3 ./bake_mesh.py {TEMPDIR + 'segment.xml'} {TEMPDIR + 'segment.mesh'}")
+	
+	# windows
+	if (r):
+		os.system(f"py ./bake_mesh.py {TEMPDIR + 'segment.xml'} {TEMPDIR + 'segment.mesh'}")
 
 def runServer(no_blender = False):
 	"""

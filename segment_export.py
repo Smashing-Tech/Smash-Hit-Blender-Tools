@@ -425,6 +425,49 @@ def createSegmentText(context, params):
 	
 	return content
 
+def parseTemplatesXml(path):
+	"""
+	Load templates from a file
+	"""
+	
+	result = {}
+	
+	tree = et.parse(path)
+	root = tree.getroot()
+	
+	assert("templates" == root.tag)
+	
+	# Loop over templates in XML file and load them
+	for child in root:
+		assert("template" == child.tag)
+		
+		name = child.attrib["name"]
+		attribs = child[0].attrib
+		
+		result[name] = attribs
+	
+	return result
+
+def solveTemplates(segment_text, templates = {}):
+	"""
+	Resolve the templates
+	"""
+	
+	# Load document
+	root = et.fromstring(segment_text)
+	
+	# For each element
+	for e in root:
+		# Get the template property if it exists
+		template = e.attrib.get("template", None)
+		
+		# If the template exists then we combine
+		if (template):
+			e.attrib |= templates[template]
+	
+	# Back to a string!
+	return et.tostring(root)
+
 def MB_progress_update_callback(value):
 	bpy.context.window_manager.progress_update(value)
 
@@ -475,6 +518,13 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 	
 	# TODO: Split into function exportSegmentTest
 	if (params.get("sh_test_server", False) == True):
+		# Get templates path
+		templates = params.get("sh_meshbake_template", None)
+		
+		# Solve templates if we have them
+		if (templates):
+			content = solveTemplates(content, parseTemplatesXml(templates))
+		
 		# Make dirs
 		tempdir = tempfile.gettempdir() + "/shbt-testserver"
 		os.makedirs(tempdir, exist_ok = True)
@@ -490,7 +540,7 @@ def sh_export_segment(filepath, context, *, compress = False, params = {}):
 			bake_mesh.BAKE_UNSEEN_FACES = params.get("bake_menu_segment", False)
 			bake_mesh.ABMIENT_OCCLUSION_ENABLED = params.get("bake_vertex_light", True)
 			bake_mesh.LIGHTING_ENABLED = params.get("lighting_enabled", False)
-			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", params.get("sh_meshbake_template", None), bake_mesh.BakeProgressInfo(MB_progress_update_callback))
+			bake_mesh.bakeMeshToFile(content, tempdir + "/segment.mesh", templates, bake_mesh.BakeProgressInfo(MB_progress_update_callback))
 		
 		context.window_manager.progress_end()
 		
