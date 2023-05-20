@@ -446,7 +446,7 @@ def solveTemplates(segment_text, templates = {}):
 			e.attrib = {**templates[template], **e.attrib}
 	
 	# Back to a string!
-	return et.tostring(root)
+	return et.tostring(root).decode('utf-8')
 
 def MB_progress_update_callback(value):
 	bpy.context.window_manager.progress_update(value)

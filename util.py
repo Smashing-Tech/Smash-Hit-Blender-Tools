@@ -7,6 +7,7 @@ import getpass
 import math
 import time
 import hashlib
+import bpy
 
 def get_time():
 	"""
