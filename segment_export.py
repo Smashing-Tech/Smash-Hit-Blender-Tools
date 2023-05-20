@@ -22,34 +22,11 @@ def tryTemplatesPath():
 	Try to get the path of the templates.xml file automatically
 	"""
 	
-	# Search for templates.xml and set path
-	path = ""
+	# Try to find templates.xml using util.find_apk() first
+	path = util.find_apk()
 	
-	print("Smash Hit Tools: Trying to find templates from APK Editor Studio ...")
-	
-	##
-	## Templates from APK Editor Studio
-	##
-	
-	try:
-		# Get the search path
-		search_path = tempfile.gettempdir() + "/apk-editor-studio/apk"
-		
-		print(f"Smash Hit Tools: Try to search in: \"{search_path}\"")
-		
-		# Enumerate files
-		dirs = os.listdir(search_path)
-		
-		for d in dirs:
-			cand = search_path + "/" + d + "/assets/templates.xml.mp3"
-			
-			print(f"Smash Hit Tools: Try file: \"{cand}\"")
-			
-			if ospath.exists(cand):
-				path = cand
-				break
-	except FileNotFoundError:
-		print("Smash Hit Tools: No APK Editor Studio folder found.")
+	if (path):
+		path += "/templates.xml.mp3"
 	
 	##
 	## Templates file from home directory

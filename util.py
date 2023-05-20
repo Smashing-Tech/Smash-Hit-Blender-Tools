@@ -55,6 +55,12 @@ def find_apk():
 	# Search for templates.xml (how we find the APK) and set path
 	path = ""
 	
+	# If the user has set an override path, then just return that if it exists
+	override = bpy.context.preferences.addons["blender_tools"].preferences.default_assets_path
+	
+	if (override and ospath.exists(override)):
+		return override
+	
 	### Try to find from APK Editor Studio ###
 	
 	try:

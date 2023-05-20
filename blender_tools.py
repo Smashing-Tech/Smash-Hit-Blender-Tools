@@ -794,6 +794,27 @@ class sh_EntityProperties(PropertyGroup):
 class sh_AddonPreferences(AddonPreferences):
 	bl_idname = "blender_tools"
 	
+	## Segment Export ##
+	enable_metadata: BoolProperty(
+		name = "Export metadata",
+		description = "Allows exporting metadata with the segment, like the time it was created and a user trace or ID",
+		default = True,
+	)
+	
+	default_assets_path: StringProperty(
+		name = "Default assets path",
+		description = "The path to your Smash Hit assets folder, if you want to override the default automatic APK finding",
+		subtype = "DIR_PATH",
+		default = "",
+	)
+	
+	creator: StringProperty(
+		name = "Creator name",
+		description = "(Optional) The name that you want to be known as in the creator feild of the segment",
+		default = "",
+	)
+	
+	## Network and privacy ##
 	enable_update_notifier: BoolProperty(
 		name = "Enable update checking",
 		description = "Enables checking for updates. This will try to contact github, which may pose a privacy risk",
@@ -824,16 +845,18 @@ class sh_AddonPreferences(AddonPreferences):
 		default = True,
 	)
 	
-	creator: StringProperty(
-		name = "Creator name",
-		description = "(Optional) The name that you want to be known as in the creator feild of the segment",
+	## Mod Services (NOT COMPLETED) ##
+	shl_handle: StringProperty(
+		name = "Handle",
+		description = "Your Smash Hit Lab username",
 		default = "",
 	)
 	
-	enable_metadata: BoolProperty(
-		name = "Export metadata",
-		description = "Allows exporting metadata with the segment, like the time it was created and a user trace or ID",
-		default = True,
+	shl_password: StringProperty(
+		name = "Password",
+		description = "Your Smash Hit Lab password",
+		subtype = "PASSWORD",
+		default = "",
 	)
 	
 	def draw(self, context):
@@ -841,6 +864,7 @@ class sh_AddonPreferences(AddonPreferences):
 		
 		ui.label(text = "Segment export")
 		ui.prop(self, "enable_metadata")
+		ui.prop(self, "default_assets_path")
 		ui.prop(self, "creator")
 		
 		ui.label(text = "Network and privacy")
