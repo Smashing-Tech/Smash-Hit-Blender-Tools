@@ -860,14 +860,16 @@ class sh_AddonPreferences(AddonPreferences):
 	)
 	
 	def draw(self, context):
-		ui = self.layout
+		layout = self.layout
 		
-		ui.label(text = "Segment export")
+		ui = layout.box()
+		ui.label(icon = "NETWORK_DRIVE", text = "Segment export")
 		ui.prop(self, "enable_metadata")
 		ui.prop(self, "default_assets_path")
 		ui.prop(self, "creator")
 		
-		ui.label(text = "Network and privacy")
+		ui = layout.box()
+		ui.label(icon = "NETWORK_DRIVE", text = "Network and privacy")
 		ui.prop(self, "enable_update_notifier")
 		ui.prop(self, "updater_channel")
 		if (self.enable_update_notifier):

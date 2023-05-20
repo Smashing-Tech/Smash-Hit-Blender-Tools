@@ -259,7 +259,7 @@ class Quad:
 	Representation of a quadrelaterial (a shape with four sides)
 	"""
 	
-	def __init__(self, p1, p2, p3, p4, colour, tile, tileRot, seg, normal):
+	def __init__(self, p1, p2, p3, p4, colour, tile, tileRot, seg, normal, extra = tuple()):
 		self.p1 = p1
 		self.p2 = p2
 		self.p3 = p3
@@ -269,6 +269,7 @@ class Quad:
 		self.tileRot = tileRot
 		self.seg = seg
 		self.normal = normal
+		self.extra = extra
 	
 	def __format__(self, _unused):
 		return f"{{ {self.p1} {self.p2} {self.p3} {self.p4} }}"
@@ -282,7 +283,7 @@ class Quad:
 		"""
 		
 		p1, p2, p3, p4, col, gc, normal = self.p1, self.p2, self.p3, self.p4, self.colour, self.seg, self.normal
-		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tileRot, self.tile)
+		tex = getTextureCoords(TILE_ROWS, TILE_COLS, TILE_BITE_ROW, TILE_BITE_COL, self.tileRot, self.tile, self.extra)
 		
 		vertexes = b''
 		vertexes += meshPointBytes(p1.x, p1.y, p1.z, tex[0][0], tex[0][1], col.x, col.y, col.z, col.a if hasattr(col, "a") else 1, gc, normal)
@@ -654,7 +655,7 @@ def generateSubdividedFaceGeometry(minest, maxest, s_size, t_size, colour, tile,
 			p4 = p1                + t_scunitpart
 			
 			# Finally make the quad
-			quads.append(Quad(p1, p2, p3, p4, colour, tile, tileRot, seg, normal))
+			quads.append(Quad(p1, p2, p3, p4, colour, tile, tileRot, seg, normal, (ax_s, s_scunitpart, ax_t, t_scunitpart)))
 			
 			# Add new size to total count (for this major axis)
 			t_current += t_size
@@ -689,13 +690,23 @@ def rotateList(e, n):
 	
 	return e
 
-def getTextureCoords(rows, cols, bite_row, bite_col, rot, tile):
+def getTextureCoords(rows, cols, bite_row, bite_col, rot, tile, crop_info):
 	"""
 	Gets the texture coordinates given the tile number.
 	
 	The tile bite is a small region of the tile that is clipped off.
 	
 	Returns ((u1, v1), (u2, v2), (u3, v3), (u4, v4))
+	
+	Crop info should be:
+		tuple(
+			first_axis_name,
+			first_axis_extent,
+			second_axis_name,
+			second_axis_extent,
+		)
+	
+	If it's not this, then I have forgotten things, and I'm pissed.
 	"""
 	
 	bite_row = (bite_row / rows)
