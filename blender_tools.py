@@ -299,7 +299,7 @@ class sh_SceneProperties(PropertyGroup):
 		description = "This will control how the boxes should be exported. Hover over each option for an explation of how it works",
 		items = [ 
 			('Mesh', "Mesh", "Exports a .mesh file alongside the segment for showing visible box geometry"),
-			('StoneHack', "Stone hack", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
+			('StoneHack', "Obstacle", "Adds a custom obstacle named 'stone' for every box that attempts to simulate stone. Only colour is supported: there are no textures"),
 			('None', "None", "Don't do anything related to baking stone; only exports the raw segment data"),
 		],
 		default = "Mesh"
@@ -893,40 +893,57 @@ class sh_SegmentPanel(Panel):
 		scene = context.scene
 		sh_properties = scene.sh_properties
 		
-		layout.prop(sh_properties, "sh_level")
-		layout.prop(sh_properties, "sh_room")
-		layout.prop(sh_properties, "sh_segment")
-		
-		layout.prop(sh_properties, "sh_len")
-		layout.prop(sh_properties, "sh_box_bake_mode")
-		layout.prop(sh_properties, "sh_template")
-		layout.prop(sh_properties, "sh_softshadow")
-		layout.prop(sh_properties, "sh_vrmultiply")
+		sub = layout.box()
+		sub.label(text = "Location", icon = "NODE")
+		sub.prop(sh_properties, "sh_level")
+		sub.prop(sh_properties, "sh_room")
+		sub.prop(sh_properties, "sh_segment")
 		
 		sub = layout.box()
-		sub.label(text = "Light", icon = "LIGHT")
-		sub.label(text = "Basic lighting")
-		sub.prop(sh_properties, "sh_light_right")
-		sub.prop(sh_properties, "sh_light_left")
-		sub.prop(sh_properties, "sh_light_top")
-		sub.prop(sh_properties, "sh_light_bottom")
-		sub.prop(sh_properties, "sh_light_front")
-		sub.prop(sh_properties, "sh_light_back")
+		sub.label(text = "Segment data", icon = "SCENE_DATA")
+		sub.prop(sh_properties, "sh_len")
+		sub.prop(sh_properties, "sh_box_bake_mode")
+		sub.prop(sh_properties, "sh_template")
+		sub.prop(sh_properties, "sh_softshadow")
+		sub.prop(sh_properties, "sh_vrmultiply")
 		
-		sub.label(text = "Advanced lighting")
-		sub.prop(sh_properties, "sh_lighting")
-		if (sh_properties.sh_lighting):
-			sub.prop(sh_properties, "sh_lighting_ambient")
+		if (sh_properties.sh_box_bake_mode == "Mesh"):
+			# Lighting
+			sub = layout.box()
+			sub.label(text = "Light", icon = "LIGHT")
+			# sub.prop(sh_properties, "sh_basic_lighting")
+			#if (sh_properties.sh_basic_lighting):
+			if (True):
+				sub.prop(sh_properties, "sh_light_right")
+				sub.prop(sh_properties, "sh_light_left")
+				sub.prop(sh_properties, "sh_light_top")
+				sub.prop(sh_properties, "sh_light_bottom")
+				sub.prop(sh_properties, "sh_light_front")
+				sub.prop(sh_properties, "sh_light_back")
+
+			sub.prop(sh_properties, "sh_lighting")
+			if (sh_properties.sh_lighting):
+				sub.prop(sh_properties, "sh_lighting_ambient")
+
+			# Mesh settings
+			sub = layout.box()
+			sub.label(text = "Meshes", icon = "MESH_DATA")
+			sub.prop(sh_properties, "sh_menu_segment")
+			sub.prop(sh_properties, "sh_ambient_occlusion")
 		
-		layout.prop(sh_properties, "sh_fog_colour_top")
-		layout.prop(sh_properties, "sh_fog_colour_bottom")
-		layout.prop(sh_properties, "sh_music")
-		layout.prop(sh_properties, "sh_reverb")
-		layout.prop(sh_properties, "sh_particles")
+		# Quick test
+		sub = layout.box()
+		sub.label(text = "Quick test", icon = "AUTO")
+		sub.prop(sh_properties, "sh_fog_colour_top")
+		sub.prop(sh_properties, "sh_fog_colour_bottom")
+		sub.prop(sh_properties, "sh_music")
+		sub.prop(sh_properties, "sh_reverb")
+		sub.prop(sh_properties, "sh_particles")
 		
-		layout.prop(sh_properties, "sh_menu_segment")
-		layout.prop(sh_properties, "sh_ambient_occlusion")
-		layout.prop(sh_properties, "sh_drm_disallow_import")
+		# DRM
+		sub = layout.box()
+		sub.label(text = "Protection", icon = "LOCKED")
+		sub.prop(sh_properties, "sh_drm_disallow_import")
 		
 		layout.separator()
 
