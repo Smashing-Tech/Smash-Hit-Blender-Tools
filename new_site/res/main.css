@@ -1,0 +1,164 @@
+/* Carambola Website CSS */
+@import url('https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;700&display=swap');
+
+/* Remove default padding */
+* {
+	margin: 0;
+	padding: 0;
+	--main-colour: #fff;
+	--main-colour-bg: #002624;
+	--main-colour-bg-dark: #001917;
+	--font-face: "Kumbh Sans", sans-serif;
+}
+
+h1, h2, h3, h4, p, li, summary {
+	font-family: var(--font-face);
+	margin-top: 0.15em;
+	margin-bottom: 0.5em;
+}
+
+h1 { font-size: 42pt; color: var(--main-colour); text-align: center; margin: 0.75em; }
+h2 { font-size: 28pt; color: var(--main-colour); text-align: center; }
+h3, summary { font-size: 20pt; font-weight: 400; border-bottom: 1px solid #0AFDEA40; padding-top: 0.8em; padding-bottom: 0.2em; }
+h4 { font-size: 18pt; }
+p, ul { font-size: 14pt; margin-bottom: 0.75em; }
+ul { margin-left: 1em; }
+.cb-quote { font-size: 20pt; line-height: 1.5; }
+
+code {
+	background: #8883;
+}
+
+.feature {
+	font-size: 19pt;
+	text-align: center;
+	padding-bottom: 0.75em;
+}
+
+.billboard {
+	border-radius: 0.5em;
+}
+
+a {
+	color: #66e0ff;
+	transition: color 0.3s;
+}
+
+a:hover {
+	color: #66e0ff;
+}
+
+a.insecure-link::after {
+	content: url("./lock_open.svg");
+}
+
+img {
+	padding: 0;
+}
+
+::selection {
+	background: #00a3cc60;
+}
+
+body {
+	background-image: linear-gradient(0.3turn, #005266, #002933);
+	color: #fff;
+}
+
+details {
+	margin-bottom: 1em;
+}
+
+.main-section {
+	border: none;
+	color: var(--main-colour);
+	max-width: 75em;
+	margin: auto;
+	padding: 1em;
+	border-radius: 0.5em;
+}
+
+/* Warning */
+.warning-main {
+	background-image: linear-gradient(0.3turn, #165044, #0b2822);
+	border-radius: 0.5em;
+	overflow: auto;
+	padding: 0.5em;
+}
+
+.tip-main {
+	background-image: linear-gradient(0.3turn, #165044, #0b2822);
+	border-radius: 0.5em;
+	overflow: auto;
+	padding: 0.5em;
+}
+
+.warning-left {
+	float: left;
+	width: 32px;
+}
+
+.warning-right {
+	float: right;
+	width: calc(100% - 32px - 1em);
+	padding-left: 1em;
+}
+
+.navbar-section {
+	-webkit-backdrop-filter: blur(1.25em);
+	backdrop-filter: blur(1.25em);
+	background: #00293380;
+	border: none;
+	padding: 1em;
+	position: fixed;
+	width: 100%;
+}
+
+.post-navbar-padding {
+	padding-top: 1em;
+}
+
+.bottom-section {
+	border: 1px solid var(--main-colour);
+	border-radius: 0.5em;
+	padding: 0.5em;
+}
+
+.cb-top-item {
+	margin: 0;
+	padding: 0;
+	margin-right: 1.0em;
+	font-size: 14pt;
+	display: inline-block;
+	vertical-align: middle;
+	font-family: var(--font-face);
+	max-height: 64px; /* Why did this fix it? */
+}
+
+.cb-logo-item {
+	margin-right: 2em;
+	font-size: 18pt;
+	display: inline-block;
+	vertical-align: middle;
+	font-family: var(--font-face);
+	color: var(--main-colour);
+}
+
+.nc-top {
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+
+.nc-bottom {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+.top-section {
+	border-top: none;
+	border-radius: 0 0 0.5em 0.5em;
+	margin-top: 0;
+	vertical-align: middle;
+	max-width: 50em;
+}
+
