@@ -1,10 +1,19 @@
 """
-HTTP server for test mod
+# Quick test server
 
-Notes:
+## Usage
 
- - Smash Hit does not actually implement the Host header correctly and
-   excludes the port. We have to fix that.
+To use the server, you need to have a config at TOOLS_HOME_FOLDER/Quick Test/data.json
+which contains the following:
+
+ * [config root]
+   * `data`: Path to the data folder, or `null`
+   * `room`: Object that contains:
+     * `fog`: Fog colour data
+     * `music`: Music to use
+     * `particles`: Particles
+     * `reverb`: Reverb settings
+     * `length`: Length of the room
 """
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -17,51 +26,66 @@ from urllib.parse import parse_qs
 import pathlib
 import os
 import os.path
+import json
 
-CONTENT_LEVEL = """<level>
+# Where any files related to Quick Test 2.0 and later are stored
+QUICK_HOME_FOLDER = common.TOOLS_HOME_FOLDER + "/Quick Test"
+
+# The default level data when running without an assets folder
+DEFAULT_LEVEL = """<level>
 	<room type="http://{}:8000/room?ignore=" distance="1000" start="true" end="true" />
 </level>"""
 
-TEMPDIR = tempfile.gettempdir() + "/shbt-testserver/"
+# The legacy temporary directory for segment export
+DEFAULT_TEMPDIR = tempfile.gettempdir() + "/shbt-testserver/"
 
-def parsePath(url):
-	"""
-	Parse the path into parameters and the real URL
-	"""
-	
-	url = url.split("?")
-	params = parse_qs(url[1]) if len(url) > 1 else {}
-	
-	# Only use the first one
-	for p in params:
-		params[p] = params[p][0]
-	
-	url = url[0]
-	
-	return (url, params)
-
-def loadFileBytes(path):
+def load_bytes(path):
 	"""
 	Load a file's bytes.
 	"""
 	
 	return pathlib.Path(path).read_bytes()
 
-def getSegmentOptions(path):
+def load_text(path):
 	"""
-	Get the segment fog colour, music, particles, reverb strings
-	
-	TODO: This would break if there are spacing errors. Unlikely, but maybe fix that?
+	Load a file's bytes.
 	"""
 	
-	root = et.fromstring(loadFileBytes(path).decode("utf-8"))
+	return pathlib.Path(path).read_text()
+
+class AssetHandler:
+	"""
+	Handles everything related to asset finding and loading
+	"""
 	
-	fog = root.attrib.get("fogcolor", "0 0 0 1 1 1").replace(" ", ", ")
-	music = root.attrib.get("qt-music", None)
-	particles = root.attrib.get("qt-particles", None)
-	reverb = root.attrib.get("qt-reverb", "").replace(" ", ", ")
+	def __init__(self, host):
+		self.host = host
+		self.load_config(QUICK_HOME_FOLDER + "/data.json")
 	
-	return {"fog": fog, "music": music, "particles": particles, "reverb": reverb}
+	def load_config(self, path):
+		conf = json.loads(pathlib.Path(config_path).read_text())
+		
+		self.path = conf.get("data", None)
+		
+		room = conf.get("room", {})
+		
+		self.fog = room.get("fog", None)
+		self.music = room.get("music", None)
+		self.particles = room.get("particles", None)
+		self.reverb = room.get("reverb", None)
+		self.length = room.get("length", None)
+	
+	def load_segment(self, type = None):
+		
+	
+	def load_room(self, type = None):
+		
+	
+	def load_segment(self, type = None):
+		
+	
+	def load_obstacle(self, type):
+		return load_bytes(f"{self.path}/obstacles/{type}.lua.mp3")
 
 def generateRoomText(hostname, options):
 	"""
@@ -99,6 +123,9 @@ end"""
 	
 	return bytes(room, "utf-8")
 
+def updateSegment(text):
+	
+
 def doError(self):
 	data = bytes("404 File Not Found", "utf-8")
 	self.send_response(404)
@@ -106,6 +133,22 @@ def doError(self):
 	self.send_header("Content-Type", "text/plain")
 	self.end_headers()
 	self.wfile.write(data)
+
+def parsePath(url):
+	"""
+	Parse the path into parameters and the real URL
+	"""
+	
+	url = url.split("?")
+	params = parse_qs(url[1]) if len(url) > 1 else {}
+	
+	# Only use the first one
+	for p in params:
+		params[p] = params[p][0]
+	
+	url = url[0]
+	
+	return (url, params)
 
 class AdServer(BaseHTTPRequestHandler):
 	"""
@@ -155,8 +198,7 @@ class AdServer(BaseHTTPRequestHandler):
 				data = bytes(f'''<ui texture="menu/start.png" selected="menu/button_select.png"><rect coords="0 0 294 384" cmd="level.start level:http://{host}:8000/level?ignore="/></ui>''', "utf-8")
 		except:
 			# Error on other files
-			doError(self)
-			return
+			return doError(self)
 		
 		# Send response
 		self.send_response(200)
@@ -195,12 +237,12 @@ def runServer(no_blender = False):
 	if (no_blender):
 		makeTestFiles()
 	
-	print("** SegServ v1.0 - Smash Hit Quick Test Server **")
+	print("Smash Hit Quick Test server")
 	
 	try:
 		server.serve_forever()
 	except Exception as e:
-		print("SegServ has crashed!!\n", e)
+		print("Quick Test server crashed!\n\n", e)
 	
 	server.server_close()
 
