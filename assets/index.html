@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<link rel="shortcut icon" type="image/png" href="./icon.png"/>
+		<title>Shatter for Blender &mdash; Smash Hit Level Editor</title>
+		<meta name="description" content="Smash Hit™ Blender® Tools is an addon for the 3D modeling software Blender that allows the creation of Smash Hit segments."/>
+		<meta name="keywords" content="Smash Hit, Modding, Blender, Level Editor, Segment Editor, Smash Hit Blender Tools, Carambola"/>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+		<style>
+			* {
+				padding: 0;
+				margin: 0;
+			}
+			
+			:root {
+				--font-family: "Kumbh Sans", sans-serif;
+			}
+			
+			.content-main {
+				background-image: linear-gradient(0.3turn, #005266, #002933);
+				height: 100vh;
+				width: 100vw;
+			}
+			
+			.items {
+				position: fixed;
+				top: 50vh;
+				left: 50vw;
+				transform: translate(-50%, -50%);
+				width: 40em;
+			}
+			
+			.text-row, .link-row, a {
+				color: #fff;
+				font-size: 24pt;
+				font-family: var(--font-family);
+				text-shadow: 0 0.125em 0.25em #0006;
+				text-align: center;
+				text-decoration: none;
+				margin-bottom: 0.8em;
+			}
+			
+			a:hover {
+				color: #66e0ff;
+			}
+			
+			.items-spacer {
+				display: inline-block;
+				width: 1em;
+				height: 1px;
+			}
+			
+			::selection {
+				background: #00a3cc60;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="content-main">
+			<div class="items">
+				<img src="./ShatterForBlender-FreeFont.svg" width="100%" style="margin-bottom: 3em;"/>
+				<div class="text-row">
+					<p>Build the Smash Hit levels of your dreams.</p>
+				</div>
+				<div class="link-row">
+					<a href="https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools">Releases</a>
+					<span class="items-spacer"></span>
+					<a href="https://github.com/Smashing-Tech/Smash-Hit-Blender-Tools/issues">Issues</a>
+					<span class="items-spacer"></span>
+					<a href="https://www.youtube.com/playlist?list=PL9lOKwOG5hg6yscbrZwv4cXlM3tiHMrud">Tutorials</a>
+					<span class="items-spacer"></span>
+					<a href="./faq.html">FAQ</a>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
