@@ -1,3 +1,5 @@
+# Smash Hit Blender Tools is now Shatter for Blender! [Please see the new repo here.](https://github.com/Shatter-Team/Shatter)
+
 # Smash Hit Tools for Blender
 
 **Smash Hit Tools for Blender** is an addon for Blender that allows the creation of segments (parts of levels) for the mobile game *Smash Hit*. Currently, it can handle boxes, obstacles, decals and water to the degree that it should be possible to create segments which look official.
